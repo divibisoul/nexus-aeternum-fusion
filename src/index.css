@@ -2,41 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Aeternum Nexus Design System - Quantum-Inspired Color Palette 
+All colors are HSL for maximum flexibility and theming capability.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Quantum Core Palette */
+    --background: 240 10% 3.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Nexus Interface Colors */
+    --card: 240 10% 6%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 240 8% 4%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
+    /* Quantum Primary - Deep Purple/Blue Fusion */
+    --primary: 260 95% 65%;
     --primary-foreground: 210 40% 98%;
+    --primary-glow: 260 100% 75%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Neural Secondary - Electric Cyan */
+    --secondary: 187 85% 55%;
+    --secondary-foreground: 240 10% 6%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Quantum Muted - Subtle Neural Gray */
+    --muted: 240 5% 15%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Plasma Orange */
+    --accent: 25 95% 60%;
+    --accent-foreground: 240 10% 6%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* Destructive - Quantum Red */
+    --destructive: 0 85% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Interface Elements */
+    --border: 240 8% 18%;
+    --input: 240 8% 12%;
+    --ring: 260 95% 65%;
 
-    --radius: 0.5rem;
+    /* Quantum Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(260 95% 65%), hsl(260 100% 75%));
+    --gradient-neural: linear-gradient(135deg, hsl(187 85% 55%), hsl(210 85% 65%));
+    --gradient-plasma: linear-gradient(135deg, hsl(25 95% 60%), hsl(45 95% 70%));
+    --gradient-quantum: linear-gradient(135deg, hsl(260 95% 65%), hsl(187 85% 55%), hsl(25 95% 60%));
+    --gradient-background: linear-gradient(135deg, hsl(240 10% 3.9%), hsl(240 15% 8%));
+
+    /* Quantum Shadows */
+    --shadow-quantum: 0 10px 40px -10px hsl(260 95% 65% / 0.3);
+    --shadow-neural: 0 5px 20px -5px hsl(187 85% 55% / 0.4);
+    --shadow-plasma: 0 8px 30px -8px hsl(25 95% 60% / 0.35);
+    --shadow-glow: 0 0 50px hsl(260 100% 75% / 0.4);
+
+    /* Animations */
+    --transition-quantum: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    --transition-neural: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -101,5 +127,60 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background: var(--gradient-background);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Quantum UI Effects */
+  .quantum-glow {
+    box-shadow: var(--shadow-quantum);
+  }
+
+  .neural-glow {
+    box-shadow: var(--shadow-neural);
+  }
+
+  .plasma-glow {
+    box-shadow: var(--shadow-plasma);
+  }
+
+  .quantum-border {
+    border: 1px solid hsl(var(--primary) / 0.3);
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(10px);
+  }
+
+  .neural-pulse {
+    animation: neural-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes neural-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .quantum-text {
+    background: var(--gradient-quantum);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--gradient-primary);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gradient-neural);
   }
 }
