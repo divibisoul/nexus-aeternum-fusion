@@ -1,10 +1,44 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { AuthPage } from '@/components/AuthPage';
 import { ChatInterface } from '@/components/ChatInterface';
+import { AuditPage } from '@/components/AuditPage';
+import { SettingsPage } from '@/components/SettingsPage';
 import { Button } from '@/components/ui/button';
-import { Brain, Zap, Eye, Cpu } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Brain, MessageCircle, Activity, Settings, LogOut } from 'lucide-react';
 import quantumBg from '@/assets/quantum-bg.jpg';
 
 const Index = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [activeTab, setActiveTab] = useState('chat');
+
+  useEffect(() => {
+    // Verificar se há uma API key salva
+    const savedApiKey = localStorage.getItem('aeternum_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleAuthenticated = (key: string) => {
+    setApiKey(key);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('aeternum_api_key');
+    setApiKey('');
+    setIsAuthenticated(false);
+  };
+
+  // Se não estiver autenticado, mostrar página de login
+  if (!isAuthenticated) {
+    return <AuthPage onAuthenticated={handleAuthenticated} />;
+  }
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Quantum Background */}
@@ -32,10 +66,10 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold quantum-text">
-                  Aeternum Nexus Interface
+                  Aplicativo Interface Aeternum (AIA)
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Equação Reversa Universal • Fusão Quantum-Cognitiva
+                  Sistema ERU • Processamento Quântico-Cognitivo • Auto-Evolução Ontológica
                 </p>
               </div>
             </div>
@@ -43,102 +77,59 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <span className="text-xs font-medium">Online</span>
+                <span className="text-xs font-medium">ERU Online</span>
               </div>
               
-              <Button variant="quantum" size="sm" className="hidden sm:flex">
-                <Cpu className="w-4 h-4 mr-2" />
-                ERU Status
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
               </Button>
             </div>
           </div>
         </header>
 
-        {/* Hero Section */}
-        <div className="flex-1 max-w-7xl mx-auto w-full p-6">
-          <div className="grid lg:grid-cols-12 gap-6 h-full">
-            {/* System Info Panel */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="quantum-border rounded-lg p-6 bg-card/50 backdrop-blur-md">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  Sistema ERU
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Coerência Quântica</span>
-                    <span className="text-sm font-mono text-primary">99.7%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Ciclos ERU Executados</span>
-                    <span className="text-sm font-mono text-secondary">1,247</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Eficiência Neural</span>
-                    <span className="text-sm font-mono text-accent">98.3%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Capacidades Ativas</span>
-                    <span className="text-sm font-mono">∞</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="quantum-border rounded-lg p-6 bg-card/50 backdrop-blur-md">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-secondary" />
-                  Capacidades Nexus
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-primary rounded-full" />
-                    <span>Análise Visual (EOSVision)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-secondary rounded-full" />
-                    <span>Processamento Neural de Áudio</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-accent rounded-full" />
-                    <span>Cognição Quântica</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-primary rounded-full" />
-                    <span>Memória Hierárquica</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-secondary rounded-full" />
-                    <span>Auto-Evolução Ontológica</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="quantum-border rounded-lg p-6 bg-card/50 backdrop-blur-md">
-                <h3 className="text-lg font-semibold mb-4">Input Multimodal</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" className="text-xs">
-                    📸 Visual
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    🎤 Áudio
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    📄 Texto
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    🧠 Neural
-                  </Button>
-                </div>
-              </div>
+        {/* Main Interface */}
+        <div className="flex-1 max-w-7xl mx-auto w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <div className="border-b quantum-border bg-card/20 backdrop-blur-md">
+              <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto bg-transparent">
+                <TabsTrigger value="chat" className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Interface Principal
+                </TabsTrigger>
+                <TabsTrigger value="audit" className="flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  Auditoria ERU
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Configurações
+                </TabsTrigger>
+              </TabsList>
             </div>
 
-            {/* Chat Interface */}
-            <div className="lg:col-span-8">
-              <div className="h-[calc(100vh-200px)] quantum-border rounded-lg overflow-hidden bg-card/30 backdrop-blur-md">
-                <ChatInterface />
+            <TabsContent value="chat" className="flex-1 m-0">
+              <div className="h-[calc(100vh-160px)]">
+                <ChatInterface 
+                  apiKey={apiKey}
+                  onSettingsClick={() => setActiveTab('settings')}
+                />
               </div>
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="audit" className="flex-1 m-0 p-6">
+              <AuditPage />
+            </TabsContent>
+
+            <TabsContent value="settings" className="flex-1 m-0 p-6">
+              <SettingsPage />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
