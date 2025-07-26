@@ -16,7 +16,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
   const [error, setError] = useState('');
 
   // API Key integrada diretamente no código
-  const INTEGRATED_API_KEY = 'AIzaSyBLo81cEdUiGte5SbcTnZ0SCGvGzMXGvJA';
+  const INTEGRATED_API_KEY = 'AIzaSyDkNQodJM0gJJFSOEwzRFE1PJ9X71i1EdM';
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
