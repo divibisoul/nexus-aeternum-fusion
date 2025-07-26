@@ -8,40 +8,57 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Brain, MessageCircle, Activity, Settings, LogOut, User } from 'lucide-react';
 import quantumBg from '@/assets/quantum-bg.jpg';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ username: string; apiKey: string } | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [activeTab, setActiveTab] = useState('chat');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se há usuário logado
-    const savedUser = localStorage.getItem('aeternum_user');
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setCurrentUser(userData);
-        setIsAuthenticated(true);
-      } catch (error) {
-        localStorage.removeItem('aeternum_user');
+    // Verificar sessão atual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    // Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setIsAuthenticated(!!session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
       }
-    }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleAuthenticated = (authData: { username: string; password: string }) => {
-    const savedUser = localStorage.getItem('aeternum_user');
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setCurrentUser(userData);
-      setIsAuthenticated(true);
-    }
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('aeternum_user');
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('aeternum_api_key');
     setIsAuthenticated(false);
+    setUser(null);
   };
+
+  // Mostrar loading enquanto verifica autenticação
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Brain className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
+          <p className="text-muted-foreground">Inicializando Aeternum...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Se não estiver autenticado, mostrar página de login
   if (!isAuthenticated) {
@@ -87,7 +104,7 @@ const Index = () => {
               {/* User Info */}
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20">
                 <User className="w-3 h-3" />
-                <span className="text-xs font-medium">{currentUser?.username}</span>
+                <span className="text-xs font-medium">{user?.email?.split('@')[0] || 'Usuário'}</span>
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
@@ -131,8 +148,8 @@ const Index = () => {
             <TabsContent value="chat" className="flex-1 m-0">
               <div className="h-[calc(100vh-160px)]">
                 <ChatInterface 
-                  apiKey={currentUser?.apiKey}
-                  currentUser={currentUser}
+                  apiKey={localStorage.getItem('aeternum_api_key')}
+                  currentUser={user}
                   onSettingsClick={() => setActiveTab('settings')}
                 />
               </div>

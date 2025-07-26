@@ -41,8 +41,8 @@ interface Message {
 
 interface ChatInterfaceProps {
   className?: string;
-  apiKey?: string;
-  currentUser?: { username: string; apiKey: string } | null;
+  apiKey?: string | null;
+  currentUser?: any;
   onSettingsClick?: () => void;
 }
 
