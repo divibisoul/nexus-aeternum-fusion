@@ -6,31 +6,40 @@ import { AuditPage } from '@/components/AuditPage';
 import { SettingsPage } from '@/components/SettingsPage';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, MessageCircle, Activity, Settings, LogOut } from 'lucide-react';
+import { Brain, MessageCircle, Activity, Settings, LogOut, User } from 'lucide-react';
 import quantumBg from '@/assets/quantum-bg.jpg';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [currentUser, setCurrentUser] = useState<{ username: string; apiKey: string } | null>(null);
   const [activeTab, setActiveTab] = useState('chat');
 
   useEffect(() => {
-    // Verificar se há uma API key salva
-    const savedApiKey = localStorage.getItem('aeternum_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      setIsAuthenticated(true);
+    // Verificar se há usuário logado
+    const savedUser = localStorage.getItem('aeternum_user');
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser);
+        setCurrentUser(userData);
+        setIsAuthenticated(true);
+      } catch (error) {
+        localStorage.removeItem('aeternum_user');
+      }
     }
   }, []);
 
-  const handleAuthenticated = (key: string) => {
-    setApiKey(key);
-    setIsAuthenticated(true);
+  const handleAuthenticated = (authData: { username: string; password: string }) => {
+    const savedUser = localStorage.getItem('aeternum_user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setCurrentUser(userData);
+      setIsAuthenticated(true);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('aeternum_api_key');
-    setApiKey('');
+    localStorage.removeItem('aeternum_user');
+    setCurrentUser(null);
     setIsAuthenticated(false);
   };
 
@@ -75,6 +84,12 @@ const Index = () => {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* User Info */}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20">
+                <User className="w-3 h-3" />
+                <span className="text-xs font-medium">{currentUser?.username}</span>
+              </div>
+
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 <span className="text-xs font-medium">ERU Online</span>
@@ -116,7 +131,8 @@ const Index = () => {
             <TabsContent value="chat" className="flex-1 m-0">
               <div className="h-[calc(100vh-160px)]">
                 <ChatInterface 
-                  apiKey={apiKey}
+                  apiKey={currentUser?.apiKey}
+                  currentUser={currentUser}
                   onSettingsClick={() => setActiveTab('settings')}
                 />
               </div>
