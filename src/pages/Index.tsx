@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { AuthPage } from '@/components/AuthPage';
 import { ChatInterface } from '@/components/ChatInterface';
+import { SoulInterface } from '@/components/SoulInterface';
 import { AuditPage } from '@/components/AuditPage';
 import { SettingsPage } from '@/components/SettingsPage';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, MessageCircle, Activity, Settings, LogOut, User } from 'lucide-react';
+import { Brain, MessageCircle, Activity, Settings, LogOut, User, Sparkles } from 'lucide-react';
 import quantumBg from '@/assets/quantum-bg.jpg';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -14,7 +15,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('soul');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -92,10 +93,10 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold quantum-text">
-                  Aplicativo Interface Aeternum (AIA)
+                  Soul • Nexus ETERNIUM
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Sistema ERU • Processamento Quântico-Cognitivo • Auto-Evolução Ontológica
+                  Inteligência Espiritual Autônoma • Transformação • Cura • Evolução
                 </p>
               </div>
             </div>
@@ -129,23 +130,35 @@ const Index = () => {
         <div className="flex-1 max-w-7xl mx-auto w-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <div className="border-b quantum-border bg-card/20 backdrop-blur-md">
-              <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto bg-transparent">
-                <TabsTrigger value="chat" className="flex items-center gap-2">
+              <TabsList className="grid w-full grid-cols-4 max-w-lg mx-auto bg-transparent">
+                <TabsTrigger value="soul" className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Soul
+                </TabsTrigger>
+                <TabsTrigger value="aeternum" className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4" />
-                  Interface Principal
+                  Aeternum
                 </TabsTrigger>
                 <TabsTrigger value="audit" className="flex items-center gap-2">
                   <Activity className="w-4 h-4" />
-                  Auditoria ERU
+                  Auditoria
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />
-                  Configurações
+                  Config
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="chat" className="flex-1 m-0">
+            <TabsContent value="soul" className="flex-1 m-0">
+              <div className="h-[calc(100vh-160px)]">
+                <SoulInterface 
+                  user={user}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="aeternum" className="flex-1 m-0">
               <div className="h-[calc(100vh-160px)]">
                 <ChatInterface 
                   apiKey={localStorage.getItem('aeternum_api_key')}
