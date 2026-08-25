@@ -28,6 +28,10 @@ function publish(result: SoulNexusResult): void {
   window.dispatchEvent(new CustomEvent('soul:nexus:result', { detail: result }));
 }
 
+function publishEvent(type: string, data?: unknown): void {
+  window.dispatchEvent(new CustomEvent('soul:nexus:event', { detail: { type, data } }));
+}
+
 function execute(request: SoulNexusRequest): void {
   try {
     switch (request.capability) {
@@ -63,12 +67,16 @@ function execute(request: SoulNexusRequest): void {
   }
 }
 
-/** Nexus capability execution; it adds interaction capabilities without duplicating Android controls. */
+/** Nexus side of the bidirectional Soul connection. */
 export function startSoulNexusBridge(): void {
   window.addEventListener('soul:nexus:request', (event) => {
     const request = (event as CustomEvent<SoulNexusRequest>).detail;
     if (!request || request.version !== 1 || !capabilities.includes(request.capability)) return;
     execute(request);
+  });
+  window.addEventListener('soul:nexus:hello', () => {
+    announceSoulNexusCapabilities();
+    publishEvent('ready', { capabilities });
   });
   announceSoulNexusCapabilities();
 }
