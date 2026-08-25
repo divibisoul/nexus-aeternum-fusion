@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Mic, Send, Camera, Image, FileText, Headphones, Brain, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { requestSoulCapability } from '@/integration/SoulNexusBridge';
+import { requestSoulCapability, startSoulNexusBridge } from '@/integration/SoulNexusBridge';
 
 interface NexusInputProps {
   onSend?: (message: string, attachments?: File[]) => void;
@@ -25,6 +25,10 @@ export const NexusInput: React.FC<NexusInputProps> = ({ onSend, onVoiceRecord, o
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDynamicSend = message.trim().length > 0;
+
+  useEffect(() => {
+    startSoulNexusBridge();
+  }, []);
 
   const actionOptions: ActionOption[] = [
     { id: 'camera-live', label: 'Live Analysis', icon: <Eye className="w-5 h-5" />, description: 'Analyze visual environment in real-time', variant: 'camera', action: () => { onCameraCapture?.('live'); requestSoulCapability('multimodal-input', { mode: 'live-camera' }); setShowActions(false); } },
