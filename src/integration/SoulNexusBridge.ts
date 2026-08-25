@@ -36,7 +36,7 @@ export function startSoulNexusBridge(): void {
     if (!request || request.version !== 1 || !capabilities.includes(request.capability)) return;
 
     // Nexus reports availability/results; it does not execute Android system controls.
-    window.dispatchEvent(new CustomEvent<Soul:nexus:result', {
+    window.dispatchEvent(new CustomEvent('soul:nexus:result', {
       detail: {
         version: 1,
         requestId: request.requestId,
