@@ -14,6 +14,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Typecheck Mesh adapter
-        run: npx tsc --noEmit
+        run: npx tsc -p tsconfig.mesh.json --noEmit
       - name: Build web runtime
         run: npm run build
