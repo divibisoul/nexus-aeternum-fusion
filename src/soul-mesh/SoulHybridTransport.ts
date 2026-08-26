@@ -1,4 +1,4 @@
-import type { NucleusId, SoulMeshMessage } from './endpoint';
+import type { SoulMeshMessage } from './endpoint';
 
 export type SoulHybridTransportKind = 'LOOPBACK_HTTP' | 'HTTP' | 'REALTIME' | 'WEBVIEW_BRIDGE' | 'IN_PROCESS';
 
@@ -14,9 +14,7 @@ export interface SoulTransportResult {
  */
 export async function sendSoulMeshMessage(
   message: SoulMeshMessage,
-  options: { endpoint: string; token?: string; transport?: Exclude<SoulHybridTransportKind, 'IN_PROCESS' | 'WEBVIEW_BRIDGE' | 'REALTIME'> } = {
-    endpoint: '',
-  },
+  options: { endpoint: string; token?: string; transport?: Exclude<SoulHybridTransportKind, 'IN_PROCESS' | 'WEBVIEW_BRIDGE' | 'REALTIME'> } = { endpoint: '' },
 ): Promise<SoulTransportResult> {
   if (!options.endpoint) throw new Error('SOUL_MESH_ENDPOINT_NOT_CONFIGURED');
   if (message.source !== 'N03') throw new Error('N03_TRANSPORT_SOURCE_MISMATCH');
