@@ -6,7 +6,8 @@ const N03_HANDLERS: Record<string, (payload: unknown) => Promise<unknown> | unkn
 };
 
 function authorized(req: Request) {
-  const expected = globalThis.process?.env?.SOUL_MESH_TOKEN;
+  const runtime = globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } };
+  const expected = runtime.process?.env?.SOUL_MESH_TOKEN;
   if (!expected) return true;
   return req.headers.get('authorization') === `Bearer ${expected}`;
 }
