@@ -1,7 +1,7 @@
 name: Soul Mesh CI
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'upgrade/**' ]
   workflow_dispatch:
 jobs:
   verify:
@@ -13,7 +13,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Typecheck Mesh adapter
+      - name: Typecheck Mesh adapter and N03 core
         run: npx tsc -p tsconfig.mesh.json --noEmit
       - name: Build web runtime
         run: npm run build
