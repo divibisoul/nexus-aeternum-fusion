@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-soul-mesh-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const NUCLEI = new Set(["N01", "N02", "N03", "N04", "N05", "N06"]);
@@ -52,9 +52,6 @@ function functionBody(capability: string, payload: unknown): Record<string, unkn
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const sharedSecret = Deno.env.get("SOUL_MESH_SHARED_SECRET");
-  if (sharedSecret && req.headers.get("x-soul-mesh-secret") !== sharedSecret) return json({ error: "UNAUTHORIZED" }, 401);
-
   try {
     const message = await req.json();
     if (!validMessage(message)) return json({ error: "INVALID_SOUL_MESH_MESSAGE" }, 400);
@@ -68,15 +65,17 @@ serve(async (req) => {
       return json({ protocol: "soul-mesh/1", id: crypto.randomUUID(), correlationId: message.correlationId, source: "N03", target: message.source, kind: "response", capability: message.capability, payload: { nucleus: "N03", protocol: "soul-mesh/1", capabilities: [...Object.keys(CAPABILITY_FUNCTIONS), "mesh.ping", "mesh.describe", "mesh.capabilities", "mesh.invoke"], executable: Object.keys(CAPABILITY_FUNCTIONS), status: "online" }, timestamp: Date.now() });
     }
 
-    if (message.capability === "mesh.invoke") {
-      const requested = (message.payload as { capability?: unknown } | null)?.capability;
-      const capability = typeof requested === "string" ? requested : "";
+    let capability = message.capability as string;
+    let payload = message.payload;
+    if (capability === "mesh.invoke") {
+      const invocation = payload && typeof payload === "object" ? payload as { capability?: unknown; input?: unknown; context?: unknown } : {};
+      capability = typeof invocation.capability === "string" ? invocation.capability : "";
+      payload = invocation.input;
       if (!CAPABILITY_FUNCTIONS[capability]) return json({ error: "CAPABILITY_NOT_FOUND", capability }, 404);
-      message.capability = capability;
     }
 
-    const functionName = CAPABILITY_FUNCTIONS[message.capability as string];
-    if (!functionName) return json({ protocol: "soul-mesh/1", id: crypto.randomUUID(), correlationId: message.correlationId, source: "N03", target: message.source, kind: "error", capability: message.capability, payload: { code: "CAPABILITY_HANDLER_NOT_REGISTERED", nucleus: "N03" }, timestamp: Date.now() }, 501);
+    const functionName = CAPABILITY_FUNCTIONS[capability];
+    if (!functionName) return json({ protocol: "soul-mesh/1", id: crypto.randomUUID(), correlationId: message.correlationId, source: "N03", target: message.source, kind: "error", capability, payload: { code: "CAPABILITY_HANDLER_NOT_REGISTERED", nucleus: "N03" }, timestamp: Date.now() }, 501);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured");
@@ -84,26 +83,12 @@ serve(async (req) => {
     const apikey = req.headers.get("apikey");
     const upstream = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authorization ? { Authorization: authorization } : {}),
-        ...(apikey ? { apikey } : {}),
-      },
-      body: JSON.stringify(functionBody(message.capability as string, message.payload)),
+      headers: { "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}), ...(apikey ? { apikey } : {}) },
+      body: JSON.stringify(functionBody(capability, payload)),
     });
-    const payload = await upstream.json().catch(() => ({ error: "UPSTREAM_NON_JSON" }));
+    const upstreamPayload = await upstream.json().catch(() => ({ error: "UPSTREAM_NON_JSON" }));
 
-    return json({
-      protocol: "soul-mesh/1",
-      id: crypto.randomUUID(),
-      correlationId: message.correlationId,
-      source: "N03",
-      target: message.source,
-      kind: upstream.ok ? "response" : "error",
-      capability: message.capability,
-      payload,
-      timestamp: Date.now(),
-    }, upstream.ok ? 200 : upstream.status);
+    return json({ protocol: "soul-mesh/1", id: crypto.randomUUID(), correlationId: message.correlationId, source: "N03", target: message.source, kind: upstream.ok ? "response" : "error", capability, payload: upstreamPayload, timestamp: Date.now() }, upstream.ok ? 200 : upstream.status);
   } catch (error) {
     return json({ error: "SOUL_MESH_GATEWAY_ERROR", message: error instanceof Error ? error.message : String(error) }, 500);
   }
