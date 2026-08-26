@@ -13,16 +13,10 @@ async function send(target, slot) {
   if (!url) throw new Error(`SOUL_MESH_ENDPOINT_NOT_CONFIGURED:${target}`);
   const correlationId = crypto.randomUUID();
   const message = {
-    protocol: 'soul-mesh/1',
-    nucleus: source,
-    source,
-    target,
-    channelId: channelId(target, slot),
-    capability: 'mesh.handshake',
-    kind: 'request',
-    correlationId,
-    timestamp: new Date().toISOString(),
-    payload: { probe: 'direct-peer-handshake' },
+    protocol: 'soul-mesh/1', nucleus: source, source, target,
+    channelId: channelId(target, slot), capability: 'mesh.handshake', kind: 'request',
+    id: correlationId, correlationId, timestamp: new Date().toISOString(),
+    payload: { probe: 'direct-peer-handshake', source },
   };
   const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...(process.env.SOUL_MESH_TOKEN ? { authorization: `Bearer ${process.env.SOUL_MESH_TOKEN}` } : {}) }, body: JSON.stringify(message), signal: AbortSignal.timeout(Number(process.env.SOUL_MESH_TIMEOUT_MS ?? 5000)) });
   const body = await response.json().catch(() => ({}));
@@ -30,10 +24,7 @@ async function send(target, slot) {
   return { source, target, slot, channelId: message.channelId, correlationId, httpStatus: response.status, passed, body };
 }
 
-const results = [];
-for (const target of peers) {
-  for (let slot = 1; slot <= 5; slot += 1) results.push(await send(target, slot));
-}
+const results = await Promise.all(peers.flatMap((target) => Array.from({ length: 5 }, (_, i) => send(target, i + 1))));
 const failed = results.filter((r) => !r.passed);
 console.log(JSON.stringify({ source, total: results.length, passed: results.length - failed.length, failed: failed.length, results }, null, 2));
 if (failed.length) process.exitCode = 1;
