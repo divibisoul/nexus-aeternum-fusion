@@ -6,9 +6,7 @@ type CapabilityInput = {
   context?: Record<string, unknown>;
 };
 
-type InvokeResult = {
-  output: unknown;
-};
+type InvokeResult = { output: unknown };
 
 async function invoke(functionName: string, body: Record<string, unknown>): Promise<InvokeResult> {
   const { data, error } = await supabase.functions.invoke(functionName, { body });
@@ -16,35 +14,26 @@ async function invoke(functionName: string, body: Record<string, unknown>): Prom
   return { output: data };
 }
 
+function objectInput(input: unknown): Record<string, unknown> {
+  if (input && typeof input === 'object' && !Array.isArray(input)) return input as Record<string, unknown>;
+  return { input };
+}
+
 export const N03_CAPABILITIES: readonly NexusCoreCapability[] = [
-  'voice-input',
-  'voice-output',
-  'speech-processing',
-  'multimodal-input',
-  'cognitive-ui',
-  'emotion-analysis',
-  'spiritual-wisdom',
-  'plant-knowledge',
-  'ritual-knowledge',
-  'frequency-context',
-  'mesh-communication',
+  'voice-input', 'voice-output', 'speech-processing', 'multimodal-input',
+  'cognitive-ui', 'emotion-analysis', 'spiritual-wisdom', 'plant-knowledge',
+  'ritual-knowledge', 'frequency-context', 'mesh-communication',
 ] as const;
 
 export async function executeN03Capability(capability: NexusCoreCapability, request: CapabilityInput): Promise<unknown> {
   switch (capability) {
     case 'voice-input':
-    case 'speech-processing': {
-      const { output } = await invoke('soul-voice-processing', { action: 'speech-to-text', ...(request.input as Record<string, unknown>) });
-      return output;
-    }
-    case 'voice-output': {
-      const { output } = await invoke('soul-voice-processing', { action: 'text-to-speech', ...(request.input as Record<string, unknown>) });
-      return output;
-    }
-    case 'emotion-analysis': {
-      const { output } = await invoke('soul-voice-processing', { action: 'emotional-analysis', ...(request.input as Record<string, unknown>) });
-      return output;
-    }
+    case 'speech-processing':
+      return (await invoke('soul-voice-processing', { action: 'speech-to-text', ...objectInput(request.input) })).output;
+    case 'voice-output':
+      return (await invoke('soul-voice-processing', { action: 'text-to-speech', ...objectInput(request.input) })).output;
+    case 'emotion-analysis':
+      return (await invoke('soul-voice-processing', { action: 'emotional-analysis', ...objectInput(request.input) })).output;
     case 'spiritual-wisdom':
     case 'plant-knowledge':
     case 'ritual-knowledge':
@@ -53,23 +42,16 @@ export async function executeN03Capability(capability: NexusCoreCapability, requ
         : capability === 'ritual-knowledge' ? 'ritual'
         : capability === 'frequency-context' ? 'frequency'
         : (request.context?.context ?? 'guidance');
-      const { output } = await invoke('soul-spiritual-wisdom', {
-        query: request.input,
+      return (await invoke('soul-spiritual-wisdom', {
+        query: typeof request.input === 'string' ? request.input : JSON.stringify(request.input),
         context,
         emotional_state: request.context?.emotional_state,
         user_level: request.context?.user_level ?? 'intermediate',
-      });
-      return output;
+      })).output;
     }
     case 'cognitive-ui':
-    case 'multimodal-input': {
-      const { output } = await invoke('nexus-ai', {
-        input: request.input,
-        context: request.context ?? {},
-        capability,
-      });
-      return output;
-    }
+    case 'multimodal-input':
+      return (await invoke('nexus-ai', { input: request.input, context: request.context ?? {}, capability })).output;
     case 'mesh-communication':
       return { accepted: true, capability, input: request.input };
     default:
