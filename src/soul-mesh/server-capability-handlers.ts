@@ -1,4 +1,5 @@
 import type { CapabilityHandlers, SoulMeshMessage } from '../../lib/soul-mesh/endpoint';
+import { getN03CapabilityDescriptors } from './N03CapabilityBridge';
 
 const supabaseUrl = () => process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const supabaseKey = () => process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -37,6 +38,24 @@ const objectInput = (input: unknown): Record<string, unknown> =>
   input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : { input };
 
 export const N03_SERVER_CAPABILITIES: CapabilityHandlers = {
+  'mesh.ping': (payload, message) => ({
+    ok: true,
+    nucleus: 'N03',
+    receivedFrom: message.source,
+    receivedAt: Date.now(),
+    payload,
+  }),
+  'mesh.describe': () => ({
+    nucleus: 'N03',
+    protocol: 'soul-mesh/1',
+    status: 'online',
+    capabilities: getN03CapabilityDescriptors(),
+    channels: {
+      inbound: ['N03.IN.N01', 'N03.IN.N02', 'N03.IN.N04', 'N03.IN.N05', 'N03.IN.N06'],
+      outbound: ['N03.OUT.N01', 'N03.OUT.N02', 'N03.OUT.N04', 'N03.OUT.N05', 'N03.OUT.N06'],
+    },
+  }),
+  'capability.list': () => getN03CapabilityDescriptors(),
   'voice-input': (payload, message) => invokeEdgeFunction('soul-voice-processing', { action: 'speech-to-text', ...objectInput(payload) }, message),
   'speech-processing': (payload, message) => invokeEdgeFunction('soul-voice-processing', { action: 'speech-to-text', ...objectInput(payload) }, message),
   'voice-output': (payload, message) => invokeEdgeFunction('soul-voice-processing', { action: 'text-to-speech', ...objectInput(payload) }, message),
