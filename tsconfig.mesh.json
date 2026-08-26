@@ -10,6 +10,7 @@
     "paths": { "@/*": ["src/*"] }
   },
   "include": [
+    "src/vite-env.d.ts",
     "src/core/NexusCoreProcessor.ts",
     "src/core/NexusPilotPort.ts",
     "src/integration/SoulNexusBridge.ts",
