@@ -6,8 +6,8 @@ export default async function handler(req: any, res: any) {
   const token = process.env.SOUL_MESH_TOKEN;
   if (token && req.headers.authorization !== `Bearer ${token}`) return res.status(401).json({ error: 'UNAUTHORIZED' });
   const m = req.body;
-  if (!m || m.protocol !== 'soul-mesh/1' || !m.id || !m.correlationId || !NUCLEI.has(m.source) || m.target !== NUCLEUS_ID || m.source === NUCLEUS_ID) return res.status(400).json({ error: 'INVALID_SOUL_MESH_MESSAGE' });
+  if (!m || m.protocol !== 'soul-mesh/1' || !m.id || !m.correlationId || !NUCLEI.has(m.source) || m.target !== NUCLEUS_ID || m.source === NUCLEUS_ID || !m.capability) return res.status(400).json({ error: 'INVALID_SOUL_MESH_MESSAGE' });
   if (m.kind !== 'request') return res.status(200).json({ accepted: true, correlationId: m.correlationId, source: NUCLEUS_ID, target: m.source });
-  if (!m.capability) return res.status(400).json({ error: 'MISSING_CAPABILITY', correlationId: m.correlationId });
-  return res.status(200).json({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: m.correlationId, source: NUCLEUS_ID, target: m.source, kind: 'response', capability: m.capability, payload: { nucleus: NUCLEUS_ID, accepted: true, execution: 'runtime-required', receivedAt: Date.now() }, timestamp: Date.now() });
+  if (m.capability === 'mesh.ping') return res.status(200).json({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: m.correlationId, source: NUCLEUS_ID, target: m.source, kind: 'response', capability: 'mesh.ping', payload: { ok: true, handler: 'N03.mesh.ping', echoed: m.payload, processedAt: Date.now() }, timestamp: Date.now() });
+  return res.status(501).json({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: m.correlationId, source: NUCLEUS_ID, target: m.source, kind: 'error', capability: m.capability, payload: { code: 'CAPABILITY_HANDLER_NOT_REGISTERED', nucleus: NUCLEUS_ID }, timestamp: Date.now() });
 }
