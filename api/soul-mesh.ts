@@ -5,8 +5,15 @@ const N03_HANDLERS: Record<string, (payload: unknown) => Promise<unknown> | unkn
   'mesh.capabilities': () => ({ nucleus: 'N03', source: 'runtime', note: 'Business handlers are registered by the N03 runtime; this endpoint never fabricates capability execution.' }),
 };
 
+function authorized(req: Request) {
+  const expected = globalThis.process?.env?.SOUL_MESH_TOKEN;
+  if (!expected) return true;
+  return req.headers.get('authorization') === `Bearer ${expected}`;
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'METHOD_NOT_ALLOWED' }), { status: 405, headers: { 'content-type': 'application/json' } });
+  if (!authorized(req)) return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } });
   try {
     const message = (await req.json()) as SoulMeshMessage;
     const response = await handleMeshMessage(message, 'N03' as NucleusId, N03_HANDLERS);
