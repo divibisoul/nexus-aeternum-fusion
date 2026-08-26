@@ -1,5 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { NexusCoreCapability } from '@/core/NexusCoreProcessor';
+import { supabase } from '../integrations/supabase/client';
+import type { NexusCoreCapability } from '../core/NexusCoreProcessor';
 
 type CapabilityInput = {
   input: unknown;
