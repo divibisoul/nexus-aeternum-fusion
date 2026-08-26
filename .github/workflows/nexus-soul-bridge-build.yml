@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - 'src/core/**'
       - 'src/integration/**'
+      - 'src/soul-mesh/**'
       - 'src/components/NexusInput.tsx'
+      - 'src/main.tsx'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/nexus-soul-bridge-build.yml'
