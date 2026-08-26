@@ -1,6 +1,7 @@
+import { normalizeReferenceTimestamp } from '../../src/soul-mesh/N01InteropContract';
+
 export const NUCLEUS_ID = 'N03' as const;
 export const SOUL_MESH_PROTOCOL = 'soul-mesh/1' as const;
-
 export const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'] as const;
 export type NucleusId = (typeof NUCLEI)[number];
 export type MeshKind = 'request' | 'response' | 'event' | 'error' | 'ack';
@@ -14,7 +15,7 @@ export type SoulMeshMessage = {
   kind: MeshKind;
   capability: string;
   payload: unknown;
-  timestamp: number;
+  timestamp: number | string;
 };
 
 export type CapabilityHandler = (payload: unknown, message: SoulMeshMessage) => Promise<unknown> | unknown;
@@ -25,16 +26,14 @@ const kinds = new Set<MeshKind>(['request', 'response', 'event', 'error', 'ack']
 const MAX_ID_LENGTH = 128;
 const MAX_CAPABILITY_LENGTH = 160;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 const isNonEmptyString = (value: unknown, max: number): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 
 const payloadSize = (payload: unknown): number => {
-  try {
-    return new TextEncoder().encode(JSON.stringify(payload ?? null)).byteLength;
-  } catch {
-    return Number.POSITIVE_INFINITY;
-  }
+  try { return new TextEncoder().encode(JSON.stringify(payload ?? null)).byteLength; }
+  catch { return Number.POSITIVE_INFINITY; }
 };
 
 export function validateMeshMessage(message: unknown): asserts message is SoulMeshMessage {
@@ -45,8 +44,8 @@ export function validateMeshMessage(message: unknown): asserts message is SoulMe
   if (!nucleusSet.has(String(m.source)) || !nucleusSet.has(String(m.target)) || m.source === m.target) throw new Error('INVALID_NUCLEUS_ROUTE');
   if (!kinds.has(m.kind as MeshKind)) throw new Error('INVALID_MESSAGE_KIND');
   if (!isNonEmptyString(m.capability, MAX_CAPABILITY_LENGTH)) throw new Error('MISSING_CAPABILITY');
-  if (typeof m.timestamp !== 'number' || !Number.isFinite(m.timestamp)) throw new Error('INVALID_TIMESTAMP');
-  if (Math.abs(Date.now() - m.timestamp) > 5 * 60 * 1000) throw new Error('MESSAGE_TIMESTAMP_OUT_OF_WINDOW');
+  const timestamp = normalizeReferenceTimestamp(m.timestamp as number | string);
+  if (Math.abs(Date.now() - timestamp) > MAX_CLOCK_SKEW_MS) throw new Error('MESSAGE_TIMESTAMP_OUT_OF_WINDOW');
   if (payloadSize(m.payload) > MAX_PAYLOAD_BYTES) throw new Error('PAYLOAD_TOO_LARGE');
 }
 
