@@ -1,9 +1,11 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 
 const PORT = Number(process.env.SOUL_MESH_PORT ?? 8783);
 const NUCLEUS = 'N03';
 const PROTOCOL = 'soul-mesh/1';
-const CAPABILITIES = ['mesh.ping', 'mesh.health', 'mesh.capabilities'];
+const PEERS = new Set(['N01', 'N02', 'N04', 'N05', 'N06']);
+const CAPABILITIES = ['mesh.ping', 'mesh.health', 'mesh.handshake', 'mesh.capabilities'];
 
 function send(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type,authorization' });
@@ -14,10 +16,16 @@ function envelope(kind, message = {}) {
   return { protocol: PROTOCOL, nucleus: NUCLEUS, kind, correlationId: message.correlationId ?? crypto.randomUUID(), timestamp: new Date().toISOString() };
 }
 
+function validChannelId(message) {
+  if (!message.channelId) return false;
+  const expected = new RegExp(`^(?:${message.source}\\.OUT\\.[1-5]\\.${NUCLEUS}|${NUCLEUS}\\.IN\\.[1-5]\\.${message.source})$`);
+  return PEERS.has(message.source) && expected.test(message.channelId);
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.url !== '/api/soul-mesh') return send(res, 404, { error: 'NOT_FOUND' });
-  if (req.method === 'GET') return send(res, 200, { ...envelope('health'), status: 'ready', receiver: '/api/soul-mesh', capabilities: CAPABILITIES });
+  if (req.method === 'GET') return send(res, 200, { ...envelope('health'), status: 'ready', receiver: '/api/soul-mesh', capabilities: CAPABILITIES, peers: [...PEERS] });
   if (req.method !== 'POST') return send(res, 405, { error: 'METHOD_NOT_ALLOWED' });
 
   try {
@@ -25,9 +33,11 @@ const server = http.createServer(async (req, res) => {
     for await (const chunk of req) chunks.push(chunk);
     const message = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if (message.protocol !== PROTOCOL) return send(res, 400, { ...envelope('error', message), code: 'PROTOCOL_UNSUPPORTED' });
-    if (message.target && message.target !== NUCLEUS) return send(res, 400, { ...envelope('error', message), code: 'TARGET_MISMATCH' });
+    if (message.target !== NUCLEUS) return send(res, 400, { ...envelope('error', message), code: 'TARGET_MISMATCH' });
+    if (!validChannelId(message)) return send(res, 400, { ...envelope('error', message), code: 'INVALID_CHANNEL_ID' });
     const capability = message.capability ?? message.kind;
     if (capability === 'mesh.ping' || capability === 'mesh.health') return send(res, 200, { ...envelope('response', message), capability, result: { ok: true, nucleus: NUCLEUS }, proof: 'EXECUTED' });
+    if (capability === 'mesh.handshake') return send(res, 200, { ...envelope('ack', message), capability, source: NUCLEUS, target: message.source, channelId: message.channelId, result: { connected: true, peer: message.source }, proof: 'EXECUTED' });
     if (capability === 'mesh.capabilities') return send(res, 200, { ...envelope('response', message), capability, capabilities: CAPABILITIES, proof: 'EXECUTED' });
     return send(res, 404, { ...envelope('error', message), code: 'CAPABILITY_HANDLER_NOT_REGISTERED', capability });
   } catch {
