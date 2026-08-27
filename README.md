@@ -1,73 +1,47 @@
-# Welcome to your Lovable project
+# N03 — Sistema Auditivo e de Fala do Soul
 
-## Project info
+N03 (`nexus-aeternum-fusion`) é o núcleo destinado à percepção auditiva e à fala do Soul. O projeto declara Google Cloud Speech, Google Cloud Text-to-Speech e Hugging Face Transformers como tecnologias disponíveis.
 
-**URL**: https://lovable.dev/projects/85f48f65-d19c-4c7d-bf95-c92bf9f110e8
+## Soul Mesh
 
-## How can I edit this code?
+A fundação Mesh foi adicionada de forma aditiva em `src/mesh/`:
 
-There are several ways of editing your application.
+- `SoulMeshProtocol.ts` — identidade N03 e protocolo `soul-mesh/1` v1.1.0.
+- `SoulMeshHttpTransport.ts` — HTTP com retry, backoff e circuit-breaker.
+- `SoulMeshRouter.ts` — despacho de requests e handlers.
+- `SoulMeshDiscovery.ts` — persistência local dos peers como fallback inicial.
+- `SoulMeshPeerTransport.ts` — validação de origem/destino e canais.
+- `N03AudioCapabilityRegistry.ts` — catálogo das capacidades auditivas e de fala.
 
-**Use Lovable**
+Peers IN/OUT: `N01`, `N02`, `N04`, `N05`, `N06`.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/85f48f65-d19c-4c7d-bf95-c92bf9f110e8) and start prompting.
+## Capabilities de áudio e fala
 
-Changes made via Lovable will be committed automatically to this repo.
+- `audio.transcribe` — contrato de transcrição com Google Cloud Speech / Hugging Face.
+- `speech.synthesize` — contrato de síntese com Google Cloud Text-to-Speech.
+- `audio.analyze.emotion` — contrato de análise emocional; requer adapter/modelo específico.
+- `speech.translate` — pipeline transcrição → tradução → fala; requer adapter.
+- `audio.summarize` — contrato de resumo de áudio; requer runtime de IA.
+- `audio.listen.continuous` — contrato de escuta contínua; requer runtime de áudio do dispositivo.
+- `audio.denoise` — contrato de redução de ruído; requer DSP/runtime.
+- `speaker.identify` — contrato de identificação de locutor; requer runtime/modelo.
 
-**Use your preferred IDE**
+As capacidades marcadas como requerendo adapter **não são declaradas como implementadas**. A infraestrutura está preparada sem mascarar funções que ainda não possuem integração real.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Provedores
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+As dependências Google Cloud Speech, Google Cloud Text-to-Speech e Hugging Face Transformers já estão declaradas no projeto. Configure credenciais apenas no ambiente de execução e nunca publique chaves no repositório.
 
-Follow these steps:
+## Integração Mesh
+
+A implementação legada `api/soul-mesh.ts` permanece intacta. A nova camada em `src/mesh/` é aditiva. O endpoint legado ainda possui handlers específicos de diagnóstico; a nova fundação não declara comunicação E2E concluída até que N01 e N03 possam ser executados simultaneamente.
+
+## Desenvolvimento
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
+npm run build
 ```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/85f48f65-d19c-4c7d-bf95-c92bf9f110e8) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Consulte `MESH_STATUS.md` para o estado detalhado da integração.
