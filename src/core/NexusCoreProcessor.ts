@@ -29,98 +29,60 @@ export type NexusCoreResult = {
 };
 
 const DEFAULT_CAPABILITIES: readonly NexusCoreCapability[] = [
-  'voice-input',
-  'voice-output',
-  'speech-processing',
-  'multimodal-input',
-  'cognitive-ui',
-  'emotion-analysis',
-  'spiritual-wisdom',
-  'plant-knowledge',
-  'ritual-knowledge',
-  'frequency-context',
-  'mesh-communication',
+  'voice-input', 'voice-output', 'speech-processing', 'multimodal-input',
+  'cognitive-ui', 'emotion-analysis', 'spiritual-wisdom', 'plant-knowledge',
+  'ritual-knowledge', 'frequency-context', 'mesh-communication',
 ];
 
+const PILOT_CAPABILITIES = new Set<NexusCoreCapability>([
+  'voice-input', 'voice-output', 'speech-processing', 'multimodal-input',
+  'cognitive-ui', 'emotion-analysis', 'spiritual-wisdom', 'plant-knowledge',
+  'ritual-knowledge', 'frequency-context',
+]);
+
 /**
- * Nucleus 03 processor.
- *
- * This is deliberately an orchestration layer rather than a replacement for
- * the existing SoulInterface, voice functions, spiritual-wisdom knowledge,
- * or Soul Mesh transport. Existing capabilities remain available and are
- * exposed through one processor contract so the six-nucleus APK can call
- * this nucleus as a single computational unit.
+ * N03 computational gateway. It never fabricates successful capability results:
+ * every non-Mesh capability is executed by the connected provider-agnostic pilot.
  */
 export class NexusCoreProcessor {
   private pilot?: NexusPilotPort;
   private readonly capabilities = new Set<NexusCoreCapability>(DEFAULT_CAPABILITIES);
 
-  setPilot(pilot: NexusPilotPort): void {
-    this.pilot = pilot;
-  }
-
-  clearPilot(): void {
-    this.pilot = undefined;
-  }
-
-  getCapabilities(): NexusCoreCapability[] {
-    return [...this.capabilities];
-  }
-
-  hasCapability(capability: string): capability is NexusCoreCapability {
-    return this.capabilities.has(capability as NexusCoreCapability);
-  }
+  setPilot(pilot: NexusPilotPort): void { this.pilot = pilot; }
+  clearPilot(): void { this.pilot = undefined; }
+  getCapabilities(): NexusCoreCapability[] { return [...this.capabilities]; }
+  hasCapability(capability: string): capability is NexusCoreCapability { return this.capabilities.has(capability as NexusCoreCapability); }
+  isExecutable(capability: NexusCoreCapability): boolean { return capability === 'mesh-communication' || (PILOT_CAPABILITIES.has(capability) && !!this.pilot); }
 
   async process(request: NexusCoreRequest): Promise<NexusCoreResult> {
     if (!this.hasCapability(request.capability)) {
       return { id: request.id, capability: request.capability, success: false, error: { code: 'CAPABILITY_UNAVAILABLE', message: `Capability ${request.capability} is not registered.` } };
     }
 
-    if (this.isPilotTask(request)) {
-      return this.forwardToPilot(request);
+    if (request.capability === 'mesh-communication') {
+      return {
+        id: request.id, capability: request.capability, success: true,
+        output: { nucleus: 'N03', protocol: 'soul-mesh/1', mode: 'transport-owned', ready: true },
+      };
     }
 
-    // Existing local modules remain authoritative for their domain. The core
-    // returns a dispatch descriptor instead of inventing a second implementation.
-    return {
-      id: request.id,
-      capability: request.capability,
-      success: true,
-      output: {
-        dispatch: request.capability,
-        input: request.input,
-        context: request.context ?? {},
-        nucleus: 'eternium',
-        handledBy: 'nexus-core-processor',
-      },
-    };
-  }
+    if (!PILOT_CAPABILITIES.has(request.capability)) {
+      return { id: request.id, capability: request.capability, success: false, error: { code: 'CAPABILITY_EXECUTOR_UNAVAILABLE', message: `No executor is registered for ${request.capability}.` } };
+    }
 
-  private isPilotTask(request: NexusCoreRequest): boolean {
-    return request.capability === 'cognitive-ui' || request.capability === 'multimodal-input';
+    return this.forwardToPilot(request);
   }
 
   private async forwardToPilot(request: NexusCoreRequest): Promise<NexusCoreResult> {
     if (!this.pilot) {
-      return {
-        id: request.id,
-        capability: request.capability,
-        success: false,
-        error: { code: 'PILOT_NOT_CONNECTED', message: 'No user-selected AI pilot is connected to Nexus.' },
-      };
+      return { id: request.id, capability: request.capability, success: false, error: { code: 'PILOT_NOT_CONNECTED', message: `Capability ${request.capability} requires the configured Nexus pilot.` } };
     }
-
     const pilotRequest: NexusPilotRequest = { requestId: request.id, input: request.input, context: request.context };
     try {
       const response: NexusPilotResponse = await this.pilot.request(pilotRequest);
       return { id: request.id, capability: request.capability, success: true, output: response };
     } catch (error) {
-      return {
-        id: request.id,
-        capability: request.capability,
-        success: false,
-        error: { code: 'PILOT_REQUEST_FAILED', message: error instanceof Error ? error.message : String(error) },
-      };
+      return { id: request.id, capability: request.capability, success: false, error: { code: 'PILOT_REQUEST_FAILED', message: error instanceof Error ? error.message : String(error) } };
     }
   }
 }
