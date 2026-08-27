@@ -1,5 +1,4 @@
 import { N03_AUDIO_CAPABILITIES } from './N03AudioCapabilityRegistry';
-import { SoulMeshHttpTransport } from './SoulMeshHttpTransport';
 
 const peers = [
   ['N01', 'SOUL_MESH_N01_URL'],
@@ -13,7 +12,6 @@ export function getPeerToken(peer: string) { return tokens.get(peer); }
 async function register(peer: string, envName: string) {
   const url = process.env[envName];
   if (!url) return;
-  const transport = new SoulMeshHttpTransport(3, 10_000);
   const payload = {
     nucleus: 'N03',
     endpoint: process.env.SOUL_MESH_N03_URL || '',
