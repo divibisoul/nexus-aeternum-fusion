@@ -1,0 +1,3 @@
+import { createMessage,type SoulMeshMessage } from './SoulMeshProtocol';
+export type Handler=(message:SoulMeshMessage)=>Promise<unknown>|unknown;
+export class SoulMeshRouter { private handlers=new Map<string,Handler>(); register(capability:string,handler:Handler){this.handlers.set(capability,handler);} async dispatch(message:SoulMeshMessage){const handler=this.handlers.get(message.capability); if(!handler) throw new Error(`CAPABILITY_HANDLER_NOT_REGISTERED:${message.capability}`); return handler(message);} request(source:SoulMeshMessage['source'],target:SoulMeshMessage['target'],capability:string,payload:unknown){return createMessage({source,target,kind:'request',capability,payload,correlationId:crypto.randomUUID()});} }
