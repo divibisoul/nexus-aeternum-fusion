@@ -5,6 +5,7 @@ import {
   type SoulNucleus,
   validateSoulMeshMessage,
 } from './SoulMeshProtocol';
+import { createN03HandlerMap, type SoulMeshHandlerRegistry } from './SoulMeshCapabilityRegistry';
 
 export const NUCLEUS_ID: SoulNucleus = 'N03';
 export const SOUL_TRANSPORTS = ['IN_PROCESS', 'WEBVIEW_BRIDGE', 'LOOPBACK_HTTP', 'HTTP', 'REALTIME'] as const;
@@ -12,6 +13,8 @@ export type SoulTransport = typeof SOUL_TRANSPORTS[number];
 export const N03_IMPLEMENTED_TRANSPORTS: readonly SoulTransport[] = ['IN_PROCESS', 'HTTP', 'REALTIME'];
 export const N03_ADAPTER_TARGETS: readonly SoulTransport[] = ['WEBVIEW_BRIDGE', 'LOOPBACK_HTTP'];
 export type SoulMeshMessage = CanonicalSoulMeshMessage<unknown> & { transport?: SoulTransport };
+
+const ACTIVE_N03_HANDLERS = createN03HandlerMap() as SoulMeshHandlerRegistry;
 
 export function validateMeshMessage(message: SoulMeshMessage): true {
   validateSoulMeshMessage(message);
@@ -46,9 +49,11 @@ export function getN03InteroperabilityProfile() {
 }
 
 export type SoulMeshHandler = (payload: unknown) => Promise<unknown> | unknown;
-export type SoulMeshHandlerRegistry = Readonly<Record<string, SoulMeshHandler>>;
 
-export async function handleMeshMessage(message: SoulMeshMessage, handlers: SoulMeshHandlerRegistry): Promise<SoulMeshMessage> {
+export async function handleMeshMessage(
+  message: SoulMeshMessage,
+  handlers: SoulMeshHandlerRegistry = ACTIVE_N03_HANDLERS,
+): Promise<SoulMeshMessage> {
   validateMeshMessage(message);
   if (message.target !== NUCLEUS_ID) throw new Error('WRONG_TARGET');
   if (message.kind !== 'request') return message;
