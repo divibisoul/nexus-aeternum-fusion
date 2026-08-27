@@ -1,3 +1,6 @@
+import { nexusCoreProcessor, type NexusCoreCapability } from '../../src/core/NexusCoreProcessor';
+import { SOUL_MESH_CAPABILITIES } from '../../src/soul-mesh/SoulMeshCapabilities';
+
 export type NucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
 
 export interface SoulMeshCapability {
@@ -29,21 +32,34 @@ export class SoulMeshCapabilityRegistry {
   }
 }
 
+/**
+ * Registers every capability declared by the N03 runtime boundary and binds
+ * each one to the existing NexusCoreProcessor. No provider API is introduced.
+ */
 export const createN03CapabilityRegistry = () => {
   const registry = new SoulMeshCapabilityRegistry();
-  registry.register({ id: 'mesh.ping', version: '1.0.0', execution: 'native', description: 'Mesh liveness' });
-  registry.register({ id: 'mesh.describe', version: '1.0.0', execution: 'native', description: 'N03 identity, channels and transport profile' });
-  registry.register({ id: 'capability.list', version: '1.0.0', execution: 'native', description: 'N03 capability discovery' });
 
-  registry.registerHandler('mesh.ping', async (_payload, context) => ({ ok: true, nucleus: 'N03', protocol: 'soul-mesh/1', source: context.source, correlationId: context.correlationId, timestamp: Date.now() }));
-  registry.registerHandler('mesh.describe', async (_payload, context) => ({
-    nucleus: 'N03', protocol: 'soul-mesh/1', source: context.source, correlationId: context.correlationId,
-    peers: ['N01', 'N02', 'N04', 'N05', 'N06'], inbound: true, outbound: true,
-    transports: ['IN_PROCESS', 'HTTP', 'REALTIME'], adapterTargets: ['WEBVIEW_BRIDGE', 'LOOPBACK_HTTP'],
-  }));
-  registry.registerHandler('capability.list', async (_payload, context) => ({
-    nucleus: 'N03', source: context.source, correlationId: context.correlationId, capabilities: registry.getAll(),
-  }));
+  for (const capability of SOUL_MESH_CAPABILITIES) {
+    const id = capability.id as NexusCoreCapability;
+    registry.register({
+      id: capability.id,
+      version: capability.version,
+      execution: 'cognitive-runtime',
+      description: capability.description,
+    });
+    registry.registerHandler(capability.id, async (payload, context) => {
+      if (!nexusCoreProcessor.hasCapability(id)) {
+        throw new Error(`N03_RUNTIME_CAPABILITY_NOT_REGISTERED:${capability.id}`);
+      }
+      return nexusCoreProcessor.process({
+        id: context.correlationId,
+        capability: id,
+        input: payload,
+        context: { source: context.source, target: context.target },
+      });
+    });
+  }
+
   return registry;
 };
 
