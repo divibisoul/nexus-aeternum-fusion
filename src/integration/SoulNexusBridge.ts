@@ -1,5 +1,4 @@
-import type { SoulMeshMessage } from '../soul-mesh/SoulMeshProtocol';
-import { SoulMeshSupabaseTransport } from '../soul-mesh/SoulMeshSupabaseTransport';
+import type { SoulMeshMessage, SoulMeshTransport } from '../soul-mesh/SoulMeshProtocol';
 import { nexusCoreProcessor, type NexusCoreCapability } from '../core/NexusCoreProcessor';
 
 export type SoulNexusCapability = NexusCoreCapability;
@@ -21,8 +20,15 @@ export interface SoulNexusResult {
   error?: { code: string; message: string };
 }
 
-let meshTransport: SoulMeshSupabaseTransport | undefined;
+let meshTransport: SoulMeshTransport | undefined;
 let meshUnsubscribe: (() => void) | undefined;
+
+export function setSoulNexusMeshTransport(transport: SoulMeshTransport | undefined): void {
+  meshUnsubscribe?.();
+  meshUnsubscribe = undefined;
+  meshTransport = transport;
+  if (meshTransport) meshUnsubscribe = meshTransport.onMessage(handleMeshMessage);
+}
 
 function publish(result: SoulNexusResult): void {
   window.dispatchEvent(new CustomEvent('soul:nexus:result', { detail: result }));
@@ -33,17 +39,35 @@ function publishEvent(type: string, data?: unknown): void {
 }
 
 async function execute(request: SoulNexusRequest): Promise<SoulNexusResult> {
-  const result = await nexusCoreProcessor.process({
-    id: request.requestId,
-    capability: request.capability,
-    input: request.input,
-    context: request.context,
-  });
+  const result = await nexusCoreProcessor.process({ id: request.requestId, capability: request.capability, input: request.input, context: request.context });
   return { version: 1, requestId: result.id, capability: result.capability, success: result.success, output: result.output, error: result.error };
 }
 
-/** Starts the real Nexus ↔ Soul Mesh bridge while keeping the existing local event API. */
-export function startSoulNexusBridge(): void {
+async function handleMeshMessage(message: SoulMeshMessage): Promise<void> {
+  if (message.target !== 'N03' || message.kind !== 'request' || !message.capability) return;
+  if (!nexusCoreProcessor.hasCapability(message.capability)) return;
+
+  const result = await execute({ version: 1, requestId: message.correlationId, capability: message.capability, input: message.payload });
+  publish(result);
+
+  if (!meshTransport) return;
+  await meshTransport.send({
+    protocol: 'soul-mesh/1',
+    id: crypto.randomUUID(),
+    correlationId: message.correlationId,
+    source: 'N03',
+    target: message.source,
+    kind: result.success ? 'response' : 'error',
+    capability: message.capability,
+    payload: result,
+    timestamp: Date.now(),
+  });
+}
+
+/** Starts the N03 bridge without hard-coding a provider/API transport. */
+export function startSoulNexusBridge(transport?: SoulMeshTransport): void {
+  if (transport) setSoulNexusMeshTransport(transport);
+
   window.addEventListener('soul:nexus:request', (event) => {
     const request = (event as CustomEvent<SoulNexusRequest>).detail;
     if (!request || request.version !== 1 || !nexusCoreProcessor.hasCapability(request.capability)) return;
@@ -55,38 +79,12 @@ export function startSoulNexusBridge(): void {
     publishEvent('ready', { capabilities: nexusCoreProcessor.getCapabilities() });
   });
 
-  if (!meshTransport) {
-    meshTransport = new SoulMeshSupabaseTransport();
-    meshUnsubscribe = meshTransport.onMessage(async (message: SoulMeshMessage) => {
-      if (message.target !== 'nexus' || message.kind !== 'request' || !message.capability || !nexusCoreProcessor.hasCapability(message.capability)) return;
-      const result = await execute({
-        version: 1,
-        requestId: message.correlationId,
-        capability: message.capability,
-        input: message.payload,
-      });
-      publish(result);
-      await meshTransport!.send({
-        protocol: 'soul-mesh/1',
-        id: crypto.randomUUID(),
-        correlationId: message.correlationId,
-        source: 'nexus',
-        target: message.source,
-        kind: result.success ? 'response' : 'error',
-        capability: message.capability,
-        payload: result,
-        timestamp: Date.now(),
-      });
-    });
-  }
-
   announceSoulNexusCapabilities();
 }
 
 export function stopSoulNexusBridge(): void {
   meshUnsubscribe?.();
   meshUnsubscribe = undefined;
-  void meshTransport?.close();
   meshTransport = undefined;
 }
 
@@ -100,6 +98,6 @@ export function publishSoulNexusResult(result: SoulNexusResult): void { publish(
 
 export function announceSoulNexusCapabilities(): void {
   window.dispatchEvent(new CustomEvent('soul:nexus:capabilities', {
-    detail: nexusCoreProcessor.getCapabilities().map((id) => ({ id, available: true, version: 1, provider: 'nexus-aeternum-fusion' })),
+    detail: nexusCoreProcessor.getCapabilities().map((id) => ({ id, available: nexusCoreProcessor.hasCapability(id), version: 1, provider: 'nexus-aeternum-fusion' })),
   }));
 }
