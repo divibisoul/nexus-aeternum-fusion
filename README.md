@@ -2,39 +2,41 @@
 
 N03 (`nexus-aeternum-fusion`) é o núcleo destinado à percepção auditiva e à fala do Soul. O projeto declara Google Cloud Speech, Google Cloud Text-to-Speech e Hugging Face Transformers como tecnologias disponíveis.
 
-## Soul Mesh
+## Soul Mesh — topologia K6
 
-A fundação Mesh foi adicionada de forma aditiva em `src/mesh/`:
+N03 é um nó da rede circular de 6 núcleos. Ele possui cinco conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05 e N06**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
+
+A fundação Mesh está em `src/mesh/`:
 
 - `SoulMeshProtocol.ts` — identidade N03 e protocolo `soul-mesh/1` v1.1.0.
 - `SoulMeshHttpTransport.ts` — HTTP com retry, backoff e circuit-breaker.
-- `SoulMeshRouter.ts` — despacho de requests e handlers.
-- `SoulMeshDiscovery.ts` — persistência local dos peers como fallback inicial.
+- `SoulMeshRouter.ts` — despacho de requests.
+- `SoulMeshDiscovery.ts` — persistência local de peers como fallback.
 - `SoulMeshPeerTransport.ts` — validação de origem/destino e canais.
 - `N03AudioCapabilityRegistry.ts` — catálogo das capacidades auditivas e de fala.
 
-Peers IN/OUT: `N01`, `N02`, `N04`, `N05`, `N06`.
+## Capabilities auditivas e de fala
 
-## Capabilities de áudio e fala
+- `audio.transcribe` — contrato para transcrição via Google Cloud Speech/Hugging Face.
+- `speech.synthesize` — contrato para síntese via Google Cloud Text-to-Speech.
+- `audio.analyze.emotion` — adapter/modelo de emoção pendente.
+- `speech.translate` — pipeline transcrição → tradução → fala, adapter pendente.
+- `audio.summarize` — resumo de áudio, runtime de IA pendente.
+- `audio.listen.continuous` — escuta contínua, runtime de áudio pendente.
+- `audio.denoise` — redução de ruído, DSP/runtime pendente.
+- `speaker.identify` — identificação de locutor, modelo/runtime pendente.
 
-- `audio.transcribe` — contrato de transcrição com Google Cloud Speech / Hugging Face.
-- `speech.synthesize` — contrato de síntese com Google Cloud Text-to-Speech.
-- `audio.analyze.emotion` — contrato de análise emocional; requer adapter/modelo específico.
-- `speech.translate` — pipeline transcrição → tradução → fala; requer adapter.
-- `audio.summarize` — contrato de resumo de áudio; requer runtime de IA.
-- `audio.listen.continuous` — contrato de escuta contínua; requer runtime de áudio do dispositivo.
-- `audio.denoise` — contrato de redução de ruído; requer DSP/runtime.
-- `speaker.identify` — contrato de identificação de locutor; requer runtime/modelo.
-
-As capacidades marcadas como requerendo adapter **não são declaradas como implementadas**. A infraestrutura está preparada sem mascarar funções que ainda não possuem integração real.
+**Não declaramos como implementada uma função cujo adapter real ainda não existe.**
 
 ## Provedores
 
-As dependências Google Cloud Speech, Google Cloud Text-to-Speech e Hugging Face Transformers já estão declaradas no projeto. Configure credenciais apenas no ambiente de execução e nunca publique chaves no repositório.
+As dependências `@google-cloud/speech`, `@google-cloud/text-to-speech` e `@huggingface/transformers` estão presentes no projeto. A integração de credenciais deve ocorrer somente no runtime/servidor, sem chaves no código ou Git.
 
-## Integração Mesh
+## Estado
 
-A implementação legada `api/soul-mesh.ts` permanece intacta. A nova camada em `src/mesh/` é aditiva. O endpoint legado ainda possui handlers específicos de diagnóstico; a nova fundação não declara comunicação E2E concluída até que N01 e N03 possam ser executados simultaneamente.
+Consulte `MESH_STATUS.md`. A topologia e os contratos estão preparados; comunicação E2E só pode ser confirmada quando os núcleos estiverem executando e acessíveis.
+
+O endpoint legado `api/soul-mesh.ts` permanece preservado. A nova camada é aditiva e não remove código existente.
 
 ## Desenvolvimento
 
@@ -43,5 +45,3 @@ npm i
 npm run dev
 npm run build
 ```
-
-Consulte `MESH_STATUS.md` para o estado detalhado da integração.
