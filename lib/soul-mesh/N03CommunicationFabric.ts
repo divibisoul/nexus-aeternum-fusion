@@ -10,11 +10,17 @@ export interface N03Transport {
   onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void;
 }
 
-/**
- * N03 communication fabric: keeps transport independent from the N03 AI/runtime.
- * It provides deterministic peer routing and fallback without requiring an
- * external AI API. The runtime remains the owner/executor of capabilities.
- */
+export class N03TransportError extends Error {
+  readonly failures: readonly unknown[];
+
+  constructor(failures: readonly unknown[]) {
+    super('N03_ALL_TRANSPORTS_FAILED');
+    this.name = 'N03TransportError';
+    this.failures = failures;
+  }
+}
+
+/** Transport-independent communication fabric for the N03 AI/runtime. */
 export class N03CommunicationFabric {
   readonly nucleus: SoulNucleus = 'N03';
 
@@ -34,10 +40,10 @@ export class N03CommunicationFabric {
         await transport.send(message);
         return;
       } catch (error) {
-        failures.push(error);
+        failures.push({ transport: transport.kind, error });
       }
     }
-    throw new AggregateError(failures, 'N03_ALL_TRANSPORTS_FAILED');
+    throw new N03TransportError(failures);
   }
 
   onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void {
