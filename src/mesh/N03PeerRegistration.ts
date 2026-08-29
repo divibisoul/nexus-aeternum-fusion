@@ -3,6 +3,9 @@ import { N03_AUDIO_CAPABILITIES } from './N03AudioCapabilityRegistry';
 const peers = [
   ['N01', 'SOUL_MESH_N01_URL'],
   ['N02', 'SOUL_MESH_N02_URL'],
+  ['N04', 'SOUL_MESH_N04_URL'],
+  ['N05', 'SOUL_MESH_N05_URL'],
+  ['N06', 'SOUL_MESH_N06_URL'],
 ] as const;
 let registrationStarted = false;
 const tokens = new Map<string, string>();
@@ -16,15 +19,15 @@ async function register(peer: string, envName: string) {
     nucleus: 'N03',
     endpoint: process.env.SOUL_MESH_N03_URL || '',
     capabilities: N03_AUDIO_CAPABILITIES.map(c => c.id),
-    inChannels: ['N01','N02','N04','N05','N06'].map(p => `N03.IN.${p}`),
-    outChannels: ['N01','N02','N04','N05','N06'].map(p => `N03.OUT.${p}`),
+    inChannels: peers.map(([p]) => `N03.IN.${p}`),
+    outChannels: peers.map(([p]) => `N03.OUT.${p}`),
     protocol: 'soul-mesh/1',
     version: '1.1.0',
   };
   let delay = 500;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await fetch(`${url.replace(/\/$/, '')}/soul-mesh/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10_000) });
       if (response.ok) {
         const data = await response.json().catch(() => ({}));
         if (data?.token) tokens.set(peer, String(data.token));
