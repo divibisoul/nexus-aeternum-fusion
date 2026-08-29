@@ -1,61 +1,50 @@
 # N03 Mesh Status
 
-## Role
-N03 is the Soul auditory/speech nucleus. Its Mesh endpoint exposes N03 capabilities to N01, N02, N04, N05 and N06.
+## Closure ledger
+
+N03 is an independent AI nucleus specialized in auditory perception and speech. Soul Mesh is its interoperability layer; it does not replace the N03 runtime or create a parallel API.
+
+| Area | Implemented | Integrated | Tested | Evidence | State |
+|---|---:|---:|---:|---|---|
+| Identity/protocol | 100% | 100% | 100% | `src/mesh/SoulMeshProtocol.ts`, `lib/soul-mesh/endpoint.ts` | CLOSED |
+| Five peer channels | 100% | 100% | 0% live | channel contract | VALIDATION |
+| Mesh input | 100% | 100% | 0% live | `SoulMeshRouter`/endpoint | VALIDATION |
+| Mesh output | 100% | 100% | 0% live | `SoulMeshPeerClient` | VALIDATION |
+| Agent layer | 100% | 100% | 0% live | `SoulMeshAgentRegistry`, `SoulMeshRouter` | VALIDATION |
+| Capability registry | 100% | 100% | 0% live | `SoulMeshCapabilityRegistry` | VALIDATION |
+| Perception exposer | 100% | 100% | 0% live | `SoulMeshCapabilityExposer.ts` | VALIDATION |
+| Audio/speech capabilities | 100% declared; 3 wired | 100% for wired handlers | 0% provider E2E | capability contracts | VALIDATION |
+| Discovery | 100% structural | 100% configured | 0% live | peer/discovery modules | VALIDATION |
+| Resilient transport | 100% structural | 100% | 0% live | HTTP transport | VALIDATION |
+| Ownership | 100% documented | 100% | 0% E2E | `N03CapabilityOwnership.md` | CLOSED |
+| IA↔IA E2E | 0% proven | 0% | 0% | no live multi-node run | BLOCKED BY RUNTIME |
+| CI | configured | — | pending current run | package scripts/workflow | VALIDATION |
 
 ## K6 topology
-N03 has five bidirectional peer relationships. Each peer has an N03 IN channel and an N03 OUT channel:
 
-- N01 ↔ N03: `N03.IN.N01` / `N03.OUT.N01`
-- N02 ↔ N03: `N03.IN.N02` / `N03.OUT.N02`
-- N04 ↔ N03: `N03.IN.N04` / `N03.OUT.N04`
-- N05 ↔ N03: `N03.IN.N05` / `N03.OUT.N05`
-- N06 ↔ N03: `N03.IN.N06` / `N03.OUT.N06`
+N03 has five bidirectional peer relationships: N01, N02, N04, N05 and N06. Each relationship has an inbound and outbound logical channel.
 
-The N03 endpoint accepts requests from N01/N02/N04/N05/N06 and emits responses addressed to the originating peer. This establishes the N03 side of the K6 topology without changing any other nucleus.
+## Executable capability boundary
 
-## Structurally closed components
-- Mesh protocol identity: `N03`, `soul-mesh/1`, v1.1.0.
-- Peer validation and 5 IN / 5 OUT channel model.
-- HTTP endpoint → `SoulMeshRouter` → capability handler → response chain.
-- Resilient HTTP transport with retry, exponential backoff and circuit-breaker state.
-- Peer discovery foundation.
-- Automatic N03 registration attempts to N01 and N02 with retry/backoff when URLs are configured.
-- Gemini adapter using `GEMINI_API_KEY` or `GOOGLE_API_KEY` from runtime environment.
-- `audio.transcribe`, `speech.synthesize`, and `audio.analyze.emotion` are wired to Gemini adapter functions.
-- `mesh.ping` and `mesh.describe` remain available for compatibility/diagnostics.
-- README and this status ledger updated.
-- `npm run typecheck` is now explicitly defined in package scripts.
+The canonical exposer binds only handlers actually supplied by the existing N03 perception implementation. It does not invent or duplicate implementations. The registry keeps declaration separate from execution so discovery cannot be interpreted as proof of runtime support.
 
-## Capability status
-| Capability | Structural state | Runtime provider |
-|---|---|---|
-| audio.transcribe | IMPLEMENTED | Gemini audio understanding |
-| speech.synthesize | IMPLEMENTED | Gemini TTS |
-| audio.analyze.emotion | IMPLEMENTED | Gemini audio understanding |
-| speech.translate | CONTRACT | adapter/runtime pipeline pending |
-| audio.summarize | CONTRACT | AI runtime pending |
-| audio.listen.continuous | CONTRACT | device/browser runtime pending |
-| audio.denoise | CONTRACT | DSP/runtime pending |
-| speaker.identify | CONTRACT | model/runtime pending |
+Current canonical perception mappings:
+- `perception.analyzeImage`
+- `perception.processAudio`
+- `perception.analyzeMultimodal`
 
-## Runtime validation pending
-The following require deployed/running peers and valid runtime credentials and are intentionally not marked PASS here:
+The existing audio/speech surface remains authoritative for N03-specific runtime capabilities. Capabilities without a real runtime adapter remain contracts rather than false-positive implementations.
 
-- N01 ↔ N03 live communication.
-- N02 ↔ N03 live communication.
-- N04 ↔ N03 live communication.
-- N05 ↔ N03 live communication.
-- N06 ↔ N03 live communication.
-- Real audio transcription/TTS/emotion execution against the provider.
+## No destructive changes
 
-This is a validation gate, not a construction blocker. The structural implementation remains deployable and can be validated when the nuclei are running.
+No existing N03 implementation is deleted or invalidated. New Mesh integration is additive. The legacy endpoint remains preserved.
 
-## CI
-The repository now exposes `npm run typecheck` and `npm run build`. CI status must be taken from the GitHub Actions run for the current commit; no green result is claimed until GitHub reports it.
+## Closure rule
 
-## Latest structural upgrade
-- Date: 2026-08-27
-- Latest structural commit: `b8edd0aea0c04f6b74096046c834d466b58eaf87`
-- Scope: N03 only
-- N01/N02/N04/N05/N06 modified: no
+N03 is not declared fully closed until live peer execution proves request → capability execution → response with matching correlation ID for the required N03 peer relationships and CI is green. HTTP 200, ping, file presence, or declarations alone do not count as E2E proof.
+
+## Latest correction
+
+- Commit: `e02b19bd95b13aa73b822089feddca039c556a60`
+- Added missing `SoulMeshCapabilityExposer.ts` required by `N03PerceptionCapabilities.ts`.
+- Existing implementations are injected; no duplicate perception engine was created.
