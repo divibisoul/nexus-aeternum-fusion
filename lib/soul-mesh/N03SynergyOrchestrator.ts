@@ -15,6 +15,17 @@ export type N03SynergyResult = {
 
 type SoulMeshPeerResult = Awaited<ReturnType<SoulMeshPeerClient['request']>>;
 
+export type N03FusionBranch = {
+  name: string;
+  steps: N03SynergyStep[];
+};
+
+export type N03FusionResult = {
+  correlationId: string;
+  branches: Array<N03SynergyResult & { name: string; synergy: number }>;
+  fusion: { synergy: number; inputs: unknown[] };
+};
+
 /**
  * N03 composition layer: joins N03 perception/audio with complementary peer AI
  * capabilities without creating a second transport or Mesh.
@@ -25,38 +36,58 @@ export class N03SynergyOrchestrator {
   async execute(steps: N03SynergyStep[], correlationId = randomUUID()): Promise<N03SynergyResult> {
     let previous: unknown = undefined;
     const results: N03SynergyResult['steps'] = [];
-
     for (const step of steps) {
-      const payload = previous === undefined
-        ? step.payload
-        : { input: step.payload, previous, correlationId };
+      const payload = previous === undefined ? step.payload : { input: step.payload, previous, correlationId };
       const result = await this.peers.request(step.target, step.capability, payload);
       results.push({ target: step.target, capability: step.capability, result });
       previous = result.payload;
     }
-
     return { correlationId, steps: results };
   }
 
-  /** N03 perception → N02 reasoning: audio evidence becomes cognitive context. */
   perceptionToReasoning(input: unknown) {
-    return this.execute([
-      { target: 'N02', capability: 'inference.reason', payload: { perception: input } },
-    ]);
+    return this.execute([{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }]);
   }
 
-  /** N03 perception → N04 execution: detected information becomes tool/document work. */
   perceptionToExecution(input: unknown) {
-    return this.execute([
-      { target: 'N04', capability: 'tool.execute', payload: { perception: input } },
-    ]);
+    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }]);
   }
 
-  /** Two-link composition: N03 → N02 → N04, preserving the same task correlation. */
   perceptionReasoningExecution(input: unknown) {
     return this.execute([
       { target: 'N02', capability: 'inference.reason', payload: { perception: input } },
       { target: 'N04', capability: 'tool.execute', payload: { instruction: 'Execute the useful action derived from the reasoning result.' } },
+    ]);
+  }
+
+  /**
+   * Two branches run concurrently. Their outputs are then fused into one
+   * higher-level result, preserving one correlationId for the whole operation.
+   * The score is derived from observed branch capabilities, not a hard-coded claim.
+   */
+  async fuseTwoBranches(branches: [N03FusionBranch, N03FusionBranch], correlationId = randomUUID()): Promise<N03FusionResult> {
+    const completed = await Promise.all(branches.map(async branch => {
+      const result = await this.execute(branch.steps, correlationId);
+      const uniqueCapabilities = new Set(result.steps.map(step => step.capability)).size;
+      const uniqueNuclei = new Set(result.steps.map(step => step.target)).size;
+      return { ...result, name: branch.name, synergy: uniqueCapabilities * Math.max(1, uniqueNuclei) };
+    }));
+
+    const inputs = completed.map(branch => branch.steps.at(-1)?.result.payload);
+    const capabilityCount = new Set(completed.flatMap(branch => branch.steps.map(step => step.capability))).size;
+    const nucleusCount = new Set(completed.flatMap(branch => branch.steps.map(step => step.target))).size;
+    return {
+      correlationId,
+      branches: completed,
+      fusion: { synergy: capabilityCount * Math.max(1, nucleusCount), inputs },
+    };
+  }
+
+  /** N03+N02 branch and N03+N04 branch execute together before fusion. */
+  perceptionDualFusion(input: unknown) {
+    return this.fuseTwoBranches([
+      { name: 'N03-N02-cognition', steps: [{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }] },
+      { name: 'N03-N04-action', steps: [{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }] },
     ]);
   }
 }
