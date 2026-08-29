@@ -16,12 +16,12 @@ router.register('audio.transcribe', async m => { const a=audioInput(m.payload); 
 router.register('audio.analyze.emotion', async m => { const a=audioInput(m.payload); return {analysis:await analyzeEmotion(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
 router.register('mesh.ping', m => ({ok:true,handler:'N03.mesh.ping',echoed:m.payload,processedAt:Date.now()}));
-router.register('mesh.describe', () => ({nucleus:NUCLEUS_ID,peers:[...PEERS],...channels,capabilities:['mesh.ping','mesh.describe',...N03_AUDIO_CAPABILITIES.map(c=>c.id)],status:'online'}));
+router.register('mesh.describe', () => ({nucleus:NUCLEUS_ID,peers:[...PEERS],...channels,capabilities:['mesh.ping','mesh.describe',...N03_AUDIO_CAPABILITIES.map(c=>c.id)],agents:router.listAgents(),status:'online'}));
 
 startN03PeerRegistration();
 
 export default async function handler(req:any,res:any){
-  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',version:'1.1.0',geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:['mesh.ping','mesh.describe',...N03_AUDIO_CAPABILITIES.map(c=>c.id)]});
+  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',version:'1.1.0',geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:['mesh.ping','mesh.describe',...N03_AUDIO_CAPABILITIES.map(c=>c.id)],agents:router.listAgents()});
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
   const token=process.env.SOUL_MESH_TOKEN;
   if(token && req.headers.authorization!==`Bearer ${token}`) return res.status(401).json({error:'UNAUTHORIZED'});
@@ -29,5 +29,5 @@ export default async function handler(req:any,res:any){
   if(!m || m.protocol!=='soul-mesh/1' || !m.id || !m.correlationId || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID || m.source===NUCLEUS_ID || !m.capability) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
   if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
   try { const payload=await router.dispatch(m); return response(res,m,m.capability,payload); }
-  catch(error:any){ const code=error?.message||'N03_CAPABILITY_FAILED'; const status=code.startsWith('CAPABILITY_HANDLER_NOT_REGISTERED')?501:502; return response(res,m,m.capability,{code,provider:code.startsWith('GEMINI_')?'gemini':undefined},status); }
+  catch(error:any){ const code=error?.message||'N03_CAPABILITY_FAILED'; const status=code.startsWith('CAPABILITY_HANDLER_NOT_REGISTERED')||code.startsWith('AGENT_NOT_AVAILABLE')?501:502; return response(res,m,m.capability,{code,provider:code.startsWith('GEMINI_')?'gemini':undefined},status); }
 }
