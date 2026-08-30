@@ -1,0 +1,10 @@
+{
+  "nucleus": "N03",
+  "cortexRole": "multimodal-perception-and-voice",
+  "participation": "distributed-neural-graph",
+  "signals": ["GOAL", "CONTEXT", "CAPABILITY", "RESULT", "ERROR", "FEEDBACK"],
+  "nativeRuntimePreserved": true,
+  "delegationToN01": true,
+  "delegationToPeers": true,
+  "prefrontalControl": ["attention", "goal-context", "capability-selection", "feedback"]
+}
