@@ -6,24 +6,43 @@ export type DeclaredCapability = {
   tools?: string[];
 };
 
+export type SynergyRuntimeInventory = {
+  agents?: string[];
+  tools?: string[];
+  capabilities?: DeclaredCapability[];
+};
+
 /**
- * N02↔N03 composition using capability declarations supplied by each
- * nucleus. Repositories remain independently buildable; N02 data crosses
- * the boundary as a manifest rather than a source-code import.
+ * N02↔N03 composition. Runtime inventories are accepted explicitly so the
+ * fusion engine never invents agents or tools or silently treats unknown
+ * inventories as proven empty.
  */
-export function buildN02N03Synergy(n02Capabilities: readonly DeclaredCapability[]) {
+export function buildN02N03Synergy(
+  n02Capabilities: readonly DeclaredCapability[],
+  n02Runtime: SynergyRuntimeInventory = {},
+  n03Runtime: SynergyRuntimeInventory = {},
+) {
+  const n02Declared = n02Runtime.capabilities ?? n02Capabilities;
+  const n03Declared = n03Runtime.capabilities ?? N03_CAPABILITIES.map(capability => ({ id: capability.id }));
+
   const n02: FusionCapability = {
     nucleus: 'N02',
-    agents: [],
-    tools: [...new Set(n02Capabilities.flatMap(capability => capability.tools ?? []))],
-    capabilities: n02Capabilities.map(capability => capability.id),
+    agents: [...new Set(n02Runtime.agents ?? [])],
+    tools: [...new Set([
+      ...n02Declared.flatMap(capability => capability.tools ?? []),
+      ...(n02Runtime.tools ?? []),
+    ])],
+    capabilities: n02Declared.map(capability => capability.id),
   };
 
   const n03: FusionCapability = {
     nucleus: 'N03',
-    agents: [],
-    tools: [],
-    capabilities: N03_CAPABILITIES.map(capability => capability.id),
+    agents: [...new Set(n03Runtime.agents ?? [])],
+    tools: [...new Set([
+      ...n03Declared.flatMap(capability => capability.tools ?? []),
+      ...(n03Runtime.tools ?? []),
+    ])],
+    capabilities: n03Declared.map(capability => capability.id),
   };
 
   return calculatePairFusion(n02, n03);
@@ -37,4 +56,8 @@ export const VERIFIED_N02_CAPABILITIES: readonly DeclaredCapability[] = [
   { id: 'mesh.describe' },
 ];
 
+/**
+ * Static baseline. Full agent/tool synergy is only claimed after runtime
+ * registries provide their inventories through buildN02N03Synergy().
+ */
 export const N02_N03_SYNERGY = buildN02N03Synergy(VERIFIED_N02_CAPABILITIES);
