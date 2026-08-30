@@ -14,25 +14,24 @@
 | Repository source of truth | GitHub |
 | Runtime E2E | Pending external commissioning |
 | Structural work | In progress |
-| Next | Harden runtime inventory truth + emergent capability contracts |
+| Latest implementation | Pair-fusion dimensions + regression tests |
+| Next | Replace static fallback inventories with authoritative runtime discovery where available |
 
 ## Verified N02 ↔ N03 inventory
 
 ### N02 — verified baseline
 
 Capabilities currently used by the N03 fusion contract:
-
 - `cognitive-processing`
 - `ai.generate`
 - `ai.multimodal`
 - `mesh.describe`
 
-The N02 inventory must be supplied from runtime/authoritative registry data when available. Static declarations are only a fallback baseline and must never be interpreted as proof of runtime availability.
+Static declarations are only a fallback baseline and must never be interpreted as proof of runtime availability.
 
 ### N03 — verified baseline
 
-From the current N03 capability registry/documentation:
-
+Capabilities identified by the current N03 registry/documentation include:
 - `audio.transcribe`
 - `speech.synthesize`
 - `audio.analyze.emotion`
@@ -44,9 +43,9 @@ From the current N03 capability registry/documentation:
 
 Canonical executable audio capabilities currently identified by N03 are `audio.transcribe`, `audio.analyze.emotion`, and `speech.synthesize`. Other declared capabilities remain contracts until a real handler exists.
 
-## Pair synergy hypotheses grounded in the inventories
+## Pair synergy hypotheses
 
-| N02 capability | N03 capability | Potential composition | Evidence state |
+| N02 capability | N03 capability | Potential composition | Evidence |
 |---|---|---|---|
 | `ai.multimodal` | `audio.transcribe` | multimodal audio-to-understanding pipeline | structural candidate |
 | `ai.generate` | `speech.synthesize` | generated response → speech output | structural candidate |
@@ -55,27 +54,33 @@ Canonical executable audio capabilities currently identified by N03 are `audio.t
 | `cognitive-processing` | `audio.analyze.emotion` | cognition + affect signal composition | structural candidate |
 | `ai.generate` | `speech.translate` | translated content generation + speech path | contract candidate |
 
-These are composition candidates, not claims of production capability. Each candidate must obtain a concrete contract, handler ownership, input/output schema, provenance and test before being marked executable.
+Candidates are not production claims. Each requires a concrete composition path, handler ownership, I/O schema, provenance and tests before becoming executable.
 
-## Agent/tool multiplication rule
+## Multiplication model
 
-The fusion engine must evaluate **agents × tools × capabilities × context × execution** using authoritative runtime inventories. Unknown inventories remain unknown; an empty array must not silently mean “proven empty”.
+The fusion engine evaluates **agents × tools × capabilities × context × execution** as separate dimensions. Equal identifiers across dimensions must not be conflated. Unknown inventories remain unknown; an empty array must not silently mean “proven empty”.
 
-A synergy score is useful only as a discovery signal. It is not evidence that an emergent function exists. Emergent functions require a technically valid composition path and executable handlers.
+The multiplicative component is a discovery signal, not proof of an emergent executable function.
 
-## Cross-front handoff
+## Implemented safeguards
 
-Every concurrent front should update this ledger or its nucleus-local equivalent with:
+- `src/soul-mesh/N03PairFusion.ts` keeps all five dimensions separate and exposes their multiplicative products.
+- `src/soul-mesh/N03PairFusion.test.ts` covers dimension multiplication, cross-dimension identifier isolation and two-pair composition.
+- No second transport or duplicate router was introduced; runtime communication remains delegated to the existing Soul Mesh.
 
-- `WHAT_CHANGED`
-- `WHAT_WAS_FOUND`
-- `WHAT_REMAINS`
-- `WHAT_NEXT_AGENT_SHOULD_DO`
-- commit SHA
-- branch
-- dependencies
-- validation state
-- real blockers
+## Current handoff
+
+### WHAT_CHANGED
+Pair-fusion scoring now exposes independent agent/tool/capability/context/execution dimensions, with regression coverage.
+
+### WHAT_WAS_FOUND
+The inspected `package.json` exposes `build`, `typecheck`, and `lint`, but no test script. No verified CI workflow was available in the inspected state. Therefore CI-green and runtime-test success must not be claimed without evidence.
+
+### WHAT_REMAINS
+Authoritative runtime inventory wiring, executable composition contracts, bidirectional N02 ↔ N03 integration tests, resilience validation, and external E2E commissioning remain open.
+
+### WHAT_NEXT_AGENT_SHOULD_DO
+Inspect the authoritative N02/N03 registries and Mesh invocation path; replace static fusion inputs where possible; add the smallest compatible validation mechanism already supported by the repository; then validate before introducing dependencies.
 
 ## Closure rule
 
