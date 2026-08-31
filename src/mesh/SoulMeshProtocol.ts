@@ -3,7 +3,7 @@ export const SOUL_MESH_CONTRACT_VERSION = '1.1.0' as const;
 export const NUCLEUS_ID = 'N03' as const;
 export const MESH_PEERS = ['N01','N02','N04','N05','N06'] as const;
 export type SoulNucleus = typeof NUCLEUS_ID | (typeof MESH_PEERS)[number];
-export type SoulMeshKind = 'request' | 'response' | 'event' | 'error' | 'ack';
+export type SoulMeshKind = 'request' | 'response' | 'event' | 'error';
 export interface SoulMeshMessage {
   protocol: typeof SOUL_MESH_PROTOCOL;
   contractVersion: typeof SOUL_MESH_CONTRACT_VERSION;
@@ -31,6 +31,7 @@ export function validateMessage(message: unknown): message is SoulMeshMessage {
   if (m.source !== NUCLEUS_ID && !MESH_PEERS.includes(m.source as Exclude<SoulNucleus,'N03'>)) return false;
   if (m.target !== NUCLEUS_ID && !MESH_PEERS.includes(m.target as Exclude<SoulNucleus,'N03'>)) return false;
   if (m.source === m.target || typeof m.timestamp !== 'number' || !Number.isFinite(m.timestamp)) return false;
-  if (m.kind === 'request' && !String(m.capability).trim()) return false;
+  if (!['request','response','event','error'].includes(m.kind as string)) return false;
+  if ((m.kind === 'request' || m.kind === 'response' || m.kind === 'error') && !String(m.capability).trim()) return false;
   return true;
 }
