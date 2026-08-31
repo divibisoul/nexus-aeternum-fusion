@@ -8,35 +8,54 @@ const peers = [
   ['N06', 'SOUL_MESH_N06_URL'],
 ] as const;
 let registrationStarted = false;
-const tokens = new Map<string, string>();
+const peerState = new Map<string, { status: 'healthy' | 'unavailable'; capabilities: string[]; lastSeen: number }>();
 
-export function getPeerToken(peer: string) { return tokens.get(peer); }
+export function getPeerState(peer: string) { return peerState.get(peer); }
 
 async function register(peer: string, envName: string) {
   const url = process.env[envName];
-  if (!url) return;
+  if (!url) {
+    peerState.set(peer, { status: 'unavailable', capabilities: [], lastSeen: 0 });
+    return;
+  }
+  const endpoint = `${url.replace(/\/$/, '')}/api/soul-mesh`;
   const payload = {
-    nucleus: 'N03',
-    endpoint: process.env.SOUL_MESH_N03_URL || '',
-    capabilities: N03_AUDIO_CAPABILITIES.map(c => c.id),
-    inChannels: peers.map(([p]) => `N03.IN.${p}`),
-    outChannels: peers.map(([p]) => `N03.OUT.${p}`),
     protocol: 'soul-mesh/1',
-    version: '1.1.0',
+    contractVersion: '1.1.0',
+    id: crypto.randomUUID(),
+    correlationId: crypto.randomUUID(),
+    source: 'N03',
+    target: peer,
+    kind: 'request',
+    capability: 'mesh.handshake',
+    payload: {
+      nucleus: 'N03',
+      capabilities: N03_AUDIO_CAPABILITIES.map(c => c.id),
+      inChannels: peers.map(([p]) => `N03.IN.${p}`),
+      outChannels: peers.map(([p]) => `N03.OUT.${p}`),
+    },
+    timestamp: Date.now(),
   };
   let delay = 500;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const response = await fetch(`${url.replace(/\/$/, '')}/soul-mesh/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10_000) });
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (data?.token) tokens.set(peer, String(data.token));
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const data = await response.json().catch(() => null) as any;
+      if (response.ok && data?.kind === 'response' && data?.correlationId === payload.correlationId && data?.source === peer && data?.target === 'N03') {
+        const capabilities = Array.isArray(data.payload?.capabilities) ? data.payload.capabilities.map(String) : [];
+        peerState.set(peer, { status: 'healthy', capabilities, lastSeen: Date.now() });
         return;
       }
-    } catch { /* retry below */ }
+    } catch { /* bounded retry below */ }
     await new Promise(resolve => setTimeout(resolve, delay));
     delay *= 2;
   }
+  peerState.set(peer, { status: 'unavailable', capabilities: [], lastSeen: Date.now() });
 }
 
 export function startN03PeerRegistration() {
