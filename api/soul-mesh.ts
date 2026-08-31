@@ -2,7 +2,7 @@ import { analyzeEmotion, geminiConfigured, synthesizeSpeech, transcribeAudio } f
 import { N03_AUDIO_CAPABILITIES } from '../src/mesh/N03AudioCapabilityRegistry';
 import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
-import { validateMessage } from '../src/mesh/SoulMeshProtocol';
+import { SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
 
 const NUCLEUS_ID = 'N03' as const;
@@ -15,7 +15,7 @@ const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
 const declaredCapabilities = () => ['mesh.ping','mesh.describe','capability.list',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
-function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', version:'1.1.0', id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
+function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
 
@@ -29,7 +29,7 @@ router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_A
 startN03PeerRegistration();
 
 export default async function handler(req:any,res:any){
-  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',version:'1.1.0',geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents()});
+  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents()});
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
   const m=req.body;
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
