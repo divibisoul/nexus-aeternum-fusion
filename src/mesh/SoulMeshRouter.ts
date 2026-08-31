@@ -25,8 +25,25 @@ export class SoulMeshRouter {
     return this.agents.execute(message);
   }
 
-  request(source: SoulMeshMessage['source'], target: SoulMeshMessage['target'], capability: string, payload: unknown) {
-    return createMessage({ source, target, kind: 'request', capability, payload, correlationId: crypto.randomUUID() });
+  /**
+   * Creates an outbound Mesh request while preserving an upstream
+   * correlation ID when one exists. This keeps multi-hop IA↔IA traces intact.
+   */
+  request(
+    source: SoulMeshMessage['source'],
+    target: SoulMeshMessage['target'],
+    capability: string,
+    payload: unknown,
+    correlationId?: string,
+  ) {
+    return createMessage({
+      source,
+      target,
+      kind: 'request',
+      capability,
+      payload,
+      correlationId: correlationId ?? crypto.randomUUID(),
+    });
   }
 
   listAgents() {
