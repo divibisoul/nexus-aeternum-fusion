@@ -11,13 +11,13 @@ permissions:
 jobs:
   dependency-security:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies without lifecycle scripts
-        run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Audit high-severity dependencies
+      - name: Verify lockfile matches package manifest
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Audit production and development dependency graph
         run: npm audit --audit-level=high
