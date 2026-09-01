@@ -12,13 +12,20 @@ export type FusionCapability = {
   capabilities: readonly string[];
   context?: readonly string[];
   execution?: readonly string[];
+  /** Declared data/contracts consumed by the capability surface. */
+  consumes?: readonly string[];
+  /** Declared data/contracts produced by the capability surface. */
+  produces?: readonly string[];
 };
 
 export type PairFusion = {
   source: FusionCapability;
   target: FusionCapability;
   shared: readonly string[];
+  /** Backwards-compatible candidate set. Candidates are NOT proof of emergence. */
   emergent: readonly string[];
+  /** Evidence-based compositions requiring explicit producer→consumer compatibility. */
+  validatedEmergent: readonly string[];
   score: number;
   dimensions: {
     agents: number;
@@ -41,9 +48,9 @@ const unique = (values: readonly string[]) => [...new Set(values)];
  * separate dimensions. We must not collapse them into one string set because
  * an agent id and a capability id can legitimately have the same name.
  *
- * The multiplicative component is intentionally used as a discovery signal,
- * not as proof that an emergent function is executable. Executability still
- * requires a concrete composition path and handlers.
+ * The multiplicative component is a discovery signal, not proof that an
+ * emergent function is executable. `validatedEmergent` is the stricter set:
+ * it requires an explicit producer→consumer contract between the two surfaces.
  */
 export function calculatePairFusion(source: FusionCapability, target: FusionCapability): PairFusion {
   const shared = unique([
@@ -75,6 +82,11 @@ export function calculatePairFusion(source: FusionCapability, target: FusionCapa
   const targetComplementary = targetValues.filter((x) => !sourceSet.has(x));
   const emergent = unique([...complementary, ...targetComplementary]);
 
+  const validatedEmergent = unique([
+    ...overlap(source.produces ?? [], target.consumes ?? []).map((key) => `compose.${source.nucleus}->${target.nucleus}.${key}`),
+    ...overlap(target.produces ?? [], source.consumes ?? []).map((key) => `compose.${target.nucleus}->${source.nucleus}.${key}`),
+  ]);
+
   const dimensions = {
     agents: source.agents.length * target.agents.length,
     tools: source.tools.length * target.tools.length,
@@ -83,13 +95,11 @@ export function calculatePairFusion(source: FusionCapability, target: FusionCapa
     execution: (source.execution?.length ?? 0) * (target.execution?.length ?? 0),
   };
 
-  // Product over available dimensions avoids pretending that an unknown
-  // dimension is an empty inventory. At least one dimension is always present.
   const availableProducts = Object.values(dimensions).filter((value) => value > 0);
   const multiplicativeSignal = availableProducts.reduce((product, value) => product * value, 1);
-  const score = multiplicativeSignal + emergent.length - shared.length;
+  const score = multiplicativeSignal + validatedEmergent.length - shared.length;
 
-  return { source, target, shared, emergent, score, dimensions };
+  return { source, target, shared, emergent, validatedEmergent, score, dimensions };
 }
 
 /**
@@ -99,10 +109,12 @@ export function calculatePairFusion(source: FusionCapability, target: FusionCapa
  */
 export function fuseTwoPairs(left: PairFusion, right: PairFusion) {
   const emergent = unique([...left.emergent, ...right.emergent]);
+  const validatedEmergent = unique([...left.validatedEmergent, ...right.validatedEmergent]);
   const score = left.score * right.score;
   return {
     nuclei: [left.source.nucleus, left.target.nucleus, right.source.nucleus, right.target.nucleus] as const,
     emergent,
+    validatedEmergent,
     score,
     nextLevel: score > 0 ? 'FOUR_NUCLEUS_FUSION_READY' as const : 'REQUIRES_COMPATIBILITY_WORK' as const,
   };
