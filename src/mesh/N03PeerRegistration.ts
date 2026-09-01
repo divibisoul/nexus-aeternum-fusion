@@ -6,6 +6,7 @@ const peers = [
   ['N04', 'SOUL_MESH_N04_URL'],
   ['N05', 'SOUL_MESH_N05_URL'],
   ['N06', 'SOUL_MESH_N06_URL'],
+  ['N07', 'SOUL_MESH_N07_URL'],
 ] as const;
 let registrationStarted = false;
 const peerState = new Map<string, { status: 'healthy' | 'unavailable'; capabilities: string[]; lastSeen: number }>();
@@ -19,11 +20,13 @@ async function register(peer: string, envName: string) {
     return;
   }
   const endpoint = `${url.replace(/\/$/, '')}/api/soul-mesh`;
+  const correlationId = crypto.randomUUID();
+  const nonce = crypto.randomUUID();
   const payload = {
     protocol: 'soul-mesh/1',
     contractVersion: '1.1.0',
     id: crypto.randomUUID(),
-    correlationId: crypto.randomUUID(),
+    correlationId,
     source: 'N03',
     target: peer,
     kind: 'request',
@@ -35,18 +38,26 @@ async function register(peer: string, envName: string) {
       outChannels: peers.map(([p]) => `N03.OUT.${p}`),
     },
     timestamp: Date.now(),
+    nonce,
   };
+  const secret = process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if (secret) {
+    const unsigned = JSON.stringify(payload);
+    const hmac = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', hmac, new TextEncoder().encode(unsigned));
+    (payload as any).hmac = Array.from(new Uint8Array(signature)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
   let delay = 500;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...(secret ? { 'x-soul-mesh-nonce': nonce, 'x-soul-mesh-hmac': (payload as any).hmac } : {}) },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(10_000),
       });
       const data = await response.json().catch(() => null) as any;
-      if (response.ok && data?.kind === 'response' && data?.correlationId === payload.correlationId && data?.source === peer && data?.target === 'N03') {
+      if (response.ok && data?.kind === 'response' && data?.correlationId === correlationId && data?.source === peer && data?.target === 'N03') {
         const capabilities = Array.isArray(data.payload?.capabilities) ? data.payload.capabilities.map(String) : [];
         peerState.set(peer, { status: 'healthy', capabilities, lastSeen: Date.now() });
         return;
