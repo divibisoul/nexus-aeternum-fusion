@@ -1,10 +1,10 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { createSoulMeshMessage, type SoulMeshMessage, type SoulNucleus, validateSoulMeshMessage } from './SoulMeshProtocol';
 
 const PEERS: Exclude<SoulNucleus, 'N03'>[] = ['N01', 'N02', 'N04', 'N05', 'N06', 'N07'];
 
 function secret() { return process.env.SOUL_MESH_HMAC_SECRET?.trim() ?? ''; }
-function nonce() { return createSoulMeshMessage({ source: 'N03', target: 'N01', kind: 'event', payload: {} }).id.replaceAll('-', '').padEnd(32, '0').slice(0, 32); }
+function nonce() { return randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32); }
 function canonical(message: SoulMeshMessage, nonceValue: string): string {
   return JSON.stringify({
     protocol: message.protocol, contractVersion: message.contractVersion, id: message.id, correlationId: message.correlationId,
@@ -24,7 +24,7 @@ export class SoulMeshPeerClient {
     const endpoint = this.endpointFor(target);
     if (!endpoint) throw new Error(`MESH_PEER_ENDPOINT_NOT_CONFIGURED:${target}`);
     const nonceValue = nonce();
-    const correlationId = crypto.randomUUID();
+    const correlationId = randomUUID();
     const message = createSoulMeshMessage({
       source: this.source,
       target,
