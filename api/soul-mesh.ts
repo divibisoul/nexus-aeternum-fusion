@@ -2,12 +2,12 @@ import { analyzeEmotion, geminiConfigured, synthesizeSpeech, transcribeAudio } f
 import { N03_AUDIO_CAPABILITIES } from '../src/mesh/N03AudioCapabilityRegistry';
 import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
-import { SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
+import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
 
 const NUCLEUS_ID = 'N03' as const;
-const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06']);
-const PEERS = ['N01','N02','N04','N05','N06'] as const;
+const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07']);
+const PEERS = MESH_PEERS;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const REPLAY_WINDOW_MS = 5 * 60_000;
 const seenRequests = new Map<string, number>();
