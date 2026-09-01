@@ -35,17 +35,15 @@ export async function sendFromN03(
   const message = createN03Request(target, capability, payload);
   const transport = new SoulMeshHttpTransport();
   const token = (globalThis as any).process?.env?.SOUL_MESH_TOKEN;
-  const controller = new AbortController();
   const timeout = Math.max(1, timeoutMs);
-  const timer = setTimeout(() => controller.abort(), timeout);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const networkRequest = transport.send(`${peer.url}/api/soul-mesh`, message, token);
+  const timeoutRequest = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`SOUL_MESH_TIMEOUT:${target}`)), timeout);
+  });
 
   try {
-    const response = await transport.send(
-      `${peer.url}/api/soul-mesh`,
-      message,
-      token,
-    );
-
+    const response = await Promise.race([networkRequest, timeoutRequest]);
     const body = (await response.json()) as SoulMeshMessage;
     if (
       !response.ok ||
@@ -57,11 +55,8 @@ export async function sendFromN03(
     }
     if (body.kind === 'error') throw new Error(`SOUL_MESH_REMOTE_ERROR:${target}`);
     return body.payload;
-  } catch (error) {
-    if (controller.signal.aborted) throw new Error(`SOUL_MESH_TIMEOUT:${target}`);
-    throw error;
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
 
