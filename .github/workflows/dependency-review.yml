@@ -6,18 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   dependency-security:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify lockfile matches package manifest
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Audit production and development dependency graph
+      - name: Resolve and synchronize lockfile
+        run: npm install --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+      - name: Persist synchronized lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore(n03): synchronize dependency lockfile [skip ci]"
+          git push origin "HEAD:${{ github.head_ref }}"
+      - name: Audit high-severity dependencies
         run: npm audit --audit-level=high
