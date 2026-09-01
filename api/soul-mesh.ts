@@ -18,6 +18,7 @@ const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe'
 function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
+function meshAuthorized(req:any, message:any):boolean{const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();if(secret)return verifySoulMeshHmac(message,secret);return process.env.NODE_ENV!=='production';}
 
 router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
 router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
@@ -35,8 +36,7 @@ export default async function handler(req:any,res:any){
   const m=req.body;
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
   if(!validateMessage(m) || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
-  const hmacSecret=process.env.SOUL_MESH_HMAC_SECRET;
-  if(hmacSecret && !verifySoulMeshHmac(m,hmacSecret)) return res.status(401).json({error:'INVALID_SOUL_MESH_HMAC'});
+  if(!meshAuthorized(req,m)) return res.status(401).json({error:'UNAUTHORIZED'});
   if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
   if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
   try { const payload=await router.dispatch(m); return response(res,m,m.capability,payload); }
