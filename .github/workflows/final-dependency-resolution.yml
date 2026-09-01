@@ -1,0 +1,25 @@
+name: Final dependency resolution
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Synchronize package lockfile
+        run: npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - name: Apply compatible audit fixes
+        run: npm audit fix --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - name: Verify security gate
+        run: npm audit --audit-level=high
