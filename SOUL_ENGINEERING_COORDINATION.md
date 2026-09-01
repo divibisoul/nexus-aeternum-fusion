@@ -2,12 +2,18 @@
 
 This repository is N03, an independent AI nucleus cooperating through the single Soul Mesh.
 
-Rules: GitHub is source of truth; preserve and adapt working code; audit before and after changes; continue structural implementation when runtime commissioning is unavailable; never create a second Mesh; each nucleus is an independent AI with agents, capabilities, tools, ingress, egress, discovery, delegation and response; authentication is separate from capability authorization; use identity/correlation/timestamp/nonce/HMAC consistently with the established Mesh contract; do not duplicate existing modules; research viable alternatives before accepting limitations.
+## Governing directive
+GitHub is source of truth. Inspect the current HEAD/state before mutation and re-audit after every mutation. Whenever an audit finds an incomplete, inactive, broken, inconsistent, unreachable, untested, stale or non-functional area, correct/complete/integrate/optimize it immediately. Never claim completion because an edit was issued. Never stop solely because an error or severe failure occurred: diagnose root cause, research authoritative documentation and viable alternatives, then continue via the least disruptive robust path. Preserve working capabilities and adapt before replacing; never create a second Mesh.
 
-Engineering pair order: N06↔N05 → N05↔N04 → N04↔N03 → N03↔N02 → N02↔N01. Runtime routing remains Mesh-wide; sequence is engineering dependency order.
+Every nucleus is an independent AI. Agents, capabilities, functions, tools, providers, context and native execution are first-class fusion assets; message transport alone is not functional fusion. Authentication is distinct from authorization. Preserve identity, correlation, timestamp, nonce and HMAC protections where the canonical contract applies.
 
-Two adjacent fronts may proceed simultaneously when safe. Shared nuclei must preserve compatibility. Every completed work unit leaves a GitHub handoff with source, target, connection, commit, changed files, findings, corrections, affected capabilities/agents/tools, dependencies, remaining work, compatibility, next consumer and commissioning status.
+## Evidence and time
+Evidence order: live runtime/E2E > integration test > unit/build/typecheck/race validation > contract/schema validation > static inspection. Lower evidence never upgrades a higher claim. Record start time for substantial fronts; reassess progress during long work; before delivery verify current HEAD, changed files, latest CI/check state, unresolved blockers and elapsed time. Coverage/health graphs are mandatory delivery aids, never evidence substitutes.
 
-Completion requires compatible AI role, agents, tools, capabilities, Mesh ingress/egress, discovery, delegation, correlation, authorization and failure handling. Runtime commissioning is separate.
+## Engineering order
+N06↔N05 → N05↔N04 → N04↔N03 → N03↔N02 → N02↔N01 → final N01↔N06↔N07 fusion. Runtime routing remains Mesh-wide; engineering order is dependency order. N07 is the final commissioning nucleus and must receive stabilized ingress/egress, discovery, delegation, authorization, correlation, recovery, functions, agents and tools from all preceding fronts.
 
-Optimize connected pairs multiplicatively through complementary agents/tools, reuse, parallelism, low latency, resilience, least privilege and minimal duplication.
+Two adjacent fronts may proceed simultaneously when their mutations are compatible. Every completed work unit leaves a GitHub handoff with source, target, connection, commit, changed files, findings, corrections, affected capabilities/agents/tools, dependencies, elapsed time, verification evidence, remaining work, compatibility and next consumer.
+
+## Closure
+A nucleus is not complete because code exists or ping succeeds. Structural closure requires compatible AI role, agents, tools, capabilities, Mesh ingress/egress, discovery, delegation, correlation, authorization, resilience, observability and CI evidence. Runtime commissioning remains separate and must be reported honestly.
