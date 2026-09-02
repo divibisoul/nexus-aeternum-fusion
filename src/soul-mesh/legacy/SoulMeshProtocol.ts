@@ -6,7 +6,7 @@ import {
   type SoulMeshKind,
   type SoulMeshMessage as CanonicalSoulMeshMessage,
   type SoulNucleus as CanonicalSoulNucleus,
-} from '../mesh/SoulMeshProtocol';
+} from '../../mesh/SoulMeshProtocol';
 
 /** @deprecated Use the canonical N01–N07 identifiers from src/mesh/SoulMeshProtocol.ts. */
 export type LegacySoulNucleus = 'aeternum' | 'nexus' | 'eternium' | 'chatbot' | 'chatbots' | 'chatbot-2000';
@@ -40,7 +40,7 @@ export function toCanonicalMessage<T>(message: SoulMeshMessage<T>): CanonicalSou
     source: LEGACY_TO_CANONICAL[message.source],
     target: LEGACY_TO_CANONICAL[message.target],
     kind: message.kind,
-    capability: message.capability ?? (message.kind === 'event' ? '' : undefined),
+    capability: message.capability ?? '',
     payload: message.payload,
   });
 }
@@ -57,7 +57,7 @@ export function isSoulMeshMessage(value: unknown): value is SoulMeshMessage {
     contractVersion: SOUL_MESH_CONTRACT_VERSION,
     source: LEGACY_TO_CANONICAL[candidate.source],
     target: LEGACY_TO_CANONICAL[candidate.target],
-    capability: candidate.capability ?? (candidate.kind === 'event' ? undefined : candidate.capability),
+    capability: candidate.capability ?? '',
   };
   return validateCanonicalMessage(canonicalCandidate);
 }
@@ -69,7 +69,7 @@ export function createSoulMeshMessage<T>(input: Omit<SoulMeshMessage<T>, 'protoc
     source: LEGACY_TO_CANONICAL[input.source],
     target: LEGACY_TO_CANONICAL[input.target],
     kind: input.kind,
-    capability: input.capability,
+    capability: input.capability ?? '',
     payload: input.payload,
   });
   return {
@@ -79,7 +79,7 @@ export function createSoulMeshMessage<T>(input: Omit<SoulMeshMessage<T>, 'protoc
     source: CANONICAL_TO_LEGACY[canonical.source],
     target: CANONICAL_TO_LEGACY[canonical.target],
     kind: canonical.kind,
-    capability: canonical.capability,
+    capability: canonical.capability || undefined,
     payload: canonical.payload,
     timestamp: canonical.timestamp,
   };
