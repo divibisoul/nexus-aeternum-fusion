@@ -8,16 +8,21 @@ permissions:
   contents: read
 
 jobs:
-  dependency-review:
-    runs-on: ubuntu-latest
+  dependency-audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Dependency review
-        id: dependency-review
-        uses: actions/dependency-review-action@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          fail-on-severity: high
+          node-version: 22
+          cache: npm
+      - name: Validate immutable dependency graph
+        run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Generate dependency audit evidence
         if: failure()
         shell: bash
