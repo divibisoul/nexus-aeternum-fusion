@@ -34,8 +34,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - name: Verify toolchain
-        run: node --version && npm --version
+        run: node --version && npm --version && bun --version
       - name: Capture deterministic npm ci evidence
         shell: bash
         run: node scripts/diagnostics.mjs -- npm ci
