@@ -6,9 +6,12 @@ on:
     paths:
       - 'src/core/**'
       - 'src/integration/**'
+      - 'src/mesh/**'
       - 'src/soul-mesh/**'
       - 'src/components/NexusInput.tsx'
       - 'src/main.tsx'
+      - 'scripts/lockfile-integrity.mjs'
+      - 'scripts/diagnostics.mjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/nexus-soul-bridge-build.yml'
@@ -22,8 +25,11 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
     steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        run: node --version && npm --version && printf '%s\n' "${RUNNER_NAME:-}" "${GITHUB_RUN_ID:-}" "${GITHUB_SHA:-}"
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -31,17 +37,21 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Verify lockfile determinism
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp package-lock.json "$RUNNER_TEMP/package-lock.before.json"
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          if ! cmp -s package-lock.json "$RUNNER_TEMP/package-lock.before.json"; then
-            echo 'LOCKFILE_DRIFT_DETECTED'
-            git --no-pager diff -- package-lock.json
-            exit 1
-          fi
-      - run: npm ci
-      - run: npm run build
-      - run: test -s dist/index.html
+      - name: Verify manifest-lock convergence
+        run: node scripts/lockfile-integrity.mjs
+      - name: Capture deterministic npm ci evidence
+        run: node scripts/diagnostics.mjs -- npm ci
+      - name: Build
+        run: npm run build
+      - name: Verify production artifact
+        run: test -s dist/index.html
+      - name: Upload deterministic build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n03-build-evidence-${{ github.run_id }}
+          path: |
+            LOCKFILE-INTEGRITY.json
+            .diagnostics/
+          if-no-files-found: error
+          retention-days: 30
