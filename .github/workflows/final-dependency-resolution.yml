@@ -1,4 +1,4 @@
-name: Final dependency resolution
+name: N03 dependency determinism
 
 on:
   pull_request:
@@ -6,20 +6,36 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  NODE_VERSION: '22'
 
 jobs:
   resolve:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - name: Synchronize package lockfile
-        run: npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
-      - name: Apply compatible audit fixes
-        run: npm audit fix --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
-      - name: Verify security gate
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Verify locked installation
+        run: npm ci
+      - name: Verify high-severity audit gate
         run: npm audit --audit-level=high
+      - name: Capture dependency audit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json > dependency-audit.json
+      - name: Upload dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n03-dependency-audit-${{ github.run_id }}
+          path: dependency-audit.json
+          if-no-files-found: error
+          retention-days: 30
