@@ -50,11 +50,22 @@ jobs:
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
+      - name: Capture GitHub job logs
+        if: failure()
+        run: node scripts/capture-ci-logs.mjs
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: n03-diagnostics-${{ github.run_id }}
           path: .diagnostics/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload captured job logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soul-job-logs-${{ github.run_id }}
+          path: soul-job-logs-*.json
           if-no-files-found: error
           retention-days: 30
