@@ -2,6 +2,8 @@ name: Soul Mesh CI
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,6 +13,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -19,5 +22,9 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Typecheck Mesh adapter
         run: npx tsc -p tsconfig.mesh.json --noEmit
+      - name: Pair fusion tests
+        run: npm run test:pair-fusion
+      - name: Web3.Storage unit tests
+        run: bun test lib/storage/web3-storage.test.ts
       - name: Build web runtime
         run: npm run build
