@@ -15,7 +15,7 @@ const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
 const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
 function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
