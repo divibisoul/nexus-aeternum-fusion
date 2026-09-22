@@ -28,7 +28,13 @@ async function callSara(capability:string,payload:unknown,correlationId:string):
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Number(process.env.SARA_REQUEST_TIMEOUT_MS||30000));
   try{
     const response=await fetch(SARA_URL+route,{method:isGet?'GET':'POST',headers:{accept:'application/json','content-type':'application/json',...(capability==='sara.health'?{}:{authorization:'Bearer '+SARA_TOKEN}),'x-correlation-id':correlationId},...(isGet?{}:{body:JSON.stringify({...((payload&&typeof payload==='object')?payload:{input:String(payload??'')}),...(capability==='sara.cycle'&&(!payload||typeof payload!=='object'||!('cycle_id' in payload))?{cycle_id:correlationId}:{})})}),signal:controller.signal,cache:'no-store'});
-    const body=await response.json().catch(()=>null);if(!response.ok)throw new Error('SARA_HTTP_'+response.status);return body;
+    const body=await response.json().catch(()=>null);
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      const echoed = (body as Record<string, unknown>).correlation_id;
+      if (typeof echoed === 'string' && echoed !== correlationId) throw new Error('SARA_CORRELATION_ID_MISMATCH');
+      const responseCorrelation = response.headers.get('X-Correlation-ID');
+      if (responseCorrelation && responseCorrelation !== correlationId) throw new Error('SARA_CORRELATION_ID_MISMATCH');
+    }if(!response.ok)throw new Error('SARA_HTTP_'+response.status);return body;
   }finally{clearTimeout(timer);}
 }
 
