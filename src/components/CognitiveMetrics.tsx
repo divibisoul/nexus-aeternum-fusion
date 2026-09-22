@@ -22,6 +22,7 @@ interface CognitiveMetricsProps {
 
 interface MetricData {
   value: number;
+  measured: boolean;
   trend: 'up' | 'down' | 'stable';
   status: 'optimal' | 'good' | 'warning' | 'critical';
 }
@@ -39,11 +40,11 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
   expanded = false 
 }) => {
   const [metrics] = useState<SystemMetrics>({
-    self_scan_coherence: { value: 0, trend: 'stable', status: 'critical' },
-    causal_reversal_efficiency: { value: 0, trend: 'stable', status: 'critical' },
-    ethical_conformance_score: { value: 0, trend: 'stable', status: 'critical' },
-    cognitive_cycle_time_ms: { value: 0, trend: 'stable', status: 'critical' },
-    system_uptime: { value: 0, trend: 'stable', status: 'critical' }
+    self_scan_coherence: { value: 0, measured: false, trend: 'stable', status: 'critical' },
+    causal_reversal_efficiency: { value: 0, measured: false, trend: 'stable', status: 'critical' },
+    ethical_conformance_score: { value: 0, measured: false, trend: 'stable', status: 'critical' },
+    cognitive_cycle_time_ms: { value: 0, measured: false, trend: 'stable', status: 'critical' },
+    system_uptime: { value: 0, measured: false, trend: 'stable', status: 'critical' }
   });
 
   const [isLive] = useState(false);
@@ -80,7 +81,9 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
     }
   };
 
-  const formatValue = (key: string, value: number) => {
+  const formatValue = (key: string, data: MetricData) => {
+    if (!data.measured) return '—';
+    const value = data.value;
     if (key === 'cognitive_cycle_time_ms') {
       return `${value.toFixed(0)}ms`;
     }
@@ -100,9 +103,9 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
           <span className="text-sm font-medium">ERU Status</span>
         </div>
         <div className="flex gap-3 text-xs">
-          <span className="text-green-400">Λ: {(metrics.self_scan_coherence.value * 100).toFixed(1)}%</span>
-          <span className="text-blue-400">Π: {(metrics.causal_reversal_efficiency.value * 100).toFixed(1)}%</span>
-          <span className="text-purple-400">Ε: {(metrics.ethical_conformance_score.value * 100).toFixed(1)}%</span>
+          <span className="text-green-400">Λ: {metrics.self_scan_coherence.measured ? (metrics.self_scan_coherence.value * 100).toFixed(1) + '%' : 'Λ: —'}</span>
+          <span className="text-blue-400">Π: {metrics.causal_reversal_efficiency.measured ? (metrics.causal_reversal_efficiency.value * 100).toFixed(1) + '%' : 'Π: —'}</span>
+          <span className="text-purple-400">Ε: {metrics.ethical_conformance_score.measured ? (metrics.ethical_conformance_score.value * 100).toFixed(1) + '%' : 'Ε: —'}</span>
         </div>
       </div>
     );
@@ -130,7 +133,7 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className={cn("text-sm font-mono", getStatusColor(data.status))}>
-                  {formatValue(key, data.value)}
+                  {formatValue(key, data)}
                 </span>
                 <TrendingUp className={cn("w-3 h-3", 
                   data.trend === 'up' ? 'text-green-400' : 
