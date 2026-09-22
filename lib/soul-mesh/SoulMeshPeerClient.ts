@@ -20,11 +20,10 @@ export class SoulMeshPeerClient {
     return process.env[`SOUL_MESH_${target}_URL`];
   }
 
-  async request(target: Exclude<SoulNucleus, 'N03'>, capability: string, payload: unknown): Promise<SoulMeshMessage> {
+  async request(target: Exclude<SoulNucleus, 'N03'>, capability: string, payload: unknown, correlationId = randomUUID()): Promise<SoulMeshMessage> {
     const endpoint = this.endpointFor(target);
     if (!endpoint) throw new Error(`MESH_PEER_ENDPOINT_NOT_CONFIGURED:${target}`);
     const nonceValue = nonce();
-    const correlationId = randomUUID();
     const message = createSoulMeshMessage({
       source: this.source,
       target,

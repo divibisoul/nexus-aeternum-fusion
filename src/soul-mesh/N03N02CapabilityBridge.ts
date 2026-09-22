@@ -18,16 +18,16 @@ export type N02PeerCapability = (typeof N02_PEER_CAPABILITIES)[number];
 export class N03N02CapabilityBridge {
   constructor(private readonly peer = new SoulMeshPeerClient('N03')) {}
 
-  async request(capability: N02PeerCapability, payload: unknown) {
-    return this.peer.request('N02', capability, payload);
+  async request(capability: N02PeerCapability, payload: unknown, correlationId?: string) {
+    return this.peer.request('N02', capability, payload, correlationId);
   }
 
   async cognitiveProcess(payload: unknown) {
     return this.request('cognitive-processing', payload);
   }
 
-  async generate(payload: unknown) {
-    return this.request('ai.generate', payload);
+  async generate(payload: unknown, correlationId?: string) {
+    return this.request('ai.generate', payload, correlationId);
   }
 
   async multimodal(payload: unknown) {
