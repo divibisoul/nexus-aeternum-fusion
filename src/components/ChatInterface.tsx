@@ -30,7 +30,7 @@ interface Message {
     url?: string;
     size?: number;
   }>;
-  status?: 'sending' | 'sent' | 'processing' | 'complete';
+  status?: 'sending' | 'sent' | 'processing' | 'complete' | 'error';
   eru_data?: {
     cognitive_cycle_time_ms?: number;
     self_scan_coherence?: number;
@@ -146,7 +146,7 @@ A solicitação não foi apresentada como concluída porque o executor real não
 
 **Diagnóstico:** ${error instanceof Error ? error.message : 'COGNITIVE_BACKEND_FAILED'}`,
         timestamp: new Date(),
-        status: 'complete',
+        status: 'error',
         eru_data: {
           evidenceStatus: 'UNMEASURED',
         },
@@ -190,6 +190,7 @@ A solicitação não foi apresentada como concluída porque o executor real não
       case 'sent': return <CheckCircle className="w-3 h-3" />;
       case 'processing': return <Brain className="w-3 h-3 animate-pulse" />;
       case 'complete': return <Zap className="w-3 h-3" />;
+      case 'error': return <AlertCircle className="w-3 h-3 text-destructive" />;
       default: return null;
     }
   };
@@ -320,10 +321,21 @@ A solicitação não foi apresentada como concluída porque o executor real não
                 {/* ERU Data */}
                 {message.eru_data && (
                   <div className="text-xs text-muted-foreground font-mono bg-card/30 p-2 rounded border">
-                    ERU: {message.eru_data.cognitive_cycle_time_ms}ms | 
-                    Λ: {(message.eru_data.self_scan_coherence * 100).toFixed(1)}% | 
-                    Π: {(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}% | 
-                    Ε: {(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%
+                    {typeof message.eru_data.cognitive_cycle_time_ms === 'number'
+                      ? `ERU: ${message.eru_data.cognitive_cycle_time_ms}ms | `
+                      : ''}
+                    {typeof message.eru_data.self_scan_coherence === 'number'
+                      ? `Λ: ${(message.eru_data.self_scan_coherence * 100).toFixed(1)}% | `
+                      : ''}
+                    {typeof message.eru_data.causal_reversal_efficiency === 'number'
+                      ? `Π: ${(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}% | `
+                      : ''}
+                    {typeof message.eru_data.ethical_conformance_score === 'number'
+                      ? `Ε: ${(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%`
+                      : 'ERU métricas: não mensuradas'}
+                    {message.eru_data.correlationId
+                      ? ` • correlation: ${message.eru_data.correlationId}`
+                      : ''}
                   </div>
                 )}
 
