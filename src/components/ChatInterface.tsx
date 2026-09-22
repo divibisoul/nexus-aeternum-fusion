@@ -65,12 +65,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       throw new Error('AUTH_SESSION_REQUIRED');
     }
 
+    const correlationId = crypto.randomUUID();
     const response = await fetch('/api/cognitive', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         accept: 'application/json',
         authorization: 'Bearer ' + sessionData.session.access_token,
+        'x-correlation-id': correlationId,
       },
       body: JSON.stringify({
         text: userMessage,
