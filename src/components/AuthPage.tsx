@@ -18,15 +18,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
   const [error, setError] = useState('');
   const { toast } = useToast();
 
-  // API Key integrada diretamente no código
-  const INTEGRATED_API_KEY = 'AIzaSyDkNQodJM0gJJFSOEwzRFE1PJ9X71i1EdM';
-
   useEffect(() => {
     // Verificar se já está logado
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // Armazenar API key para uso no app
-        localStorage.setItem('aeternum_api_key', INTEGRATED_API_KEY);
         onAuthenticated();
       }
     });
@@ -35,7 +30,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session) {
-          localStorage.setItem('aeternum_api_key', INTEGRATED_API_KEY);
           onAuthenticated();
         }
       }
