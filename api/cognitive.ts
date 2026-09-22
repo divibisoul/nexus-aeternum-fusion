@@ -52,7 +52,9 @@ export default async function handler(req: any, res: any) {
     const correlationId = requestedCorrelation || crypto.randomUUID();
     const message = await bridge.generate(payload, correlationId);
     const result = jsonRecord(message.payload);
-    const correlationId = message.correlationId;
+    if (message.correlationId !== correlationId) {
+      return res.status(502).json({ error: 'COGNITIVE_CORRELATION_MISMATCH' });
+    }
 
     if (requestedCorrelation && requestedCorrelation !== correlationId) {
       return res.status(502).json({ error: 'COGNITIVE_CORRELATION_MISMATCH' });
