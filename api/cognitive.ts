@@ -49,7 +49,8 @@ export default async function handler(req: any, res: any) {
         : [],
     };
 
-    const message = await bridge.generate(payload);
+    const correlationId = requestedCorrelation || crypto.randomUUID();
+    const message = await bridge.generate(payload, correlationId);
     const result = jsonRecord(message.payload);
     const correlationId = message.correlationId;
 
@@ -60,7 +61,6 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({
       ok: true,
       nucleus: 'N03',
-      authenticatedUserId: data.user.id,
       correlationId,
       providerNucleus: 'N02',
       capability: 'ai.generate',
