@@ -17,6 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -31,11 +32,13 @@ interface Message {
   }>;
   status?: 'sending' | 'sent' | 'processing' | 'complete';
   eru_data?: {
-    cognitive_cycle_time_ms: number;
-    self_scan_coherence: number;
-    causal_reversal_efficiency: number;
-    ethical_conformance_score: number;
-    quantum_validation: boolean;
+    cognitive_cycle_time_ms?: number;
+    self_scan_coherence?: number;
+    causal_reversal_efficiency?: number;
+    ethical_conformance_score?: number;
+    quantum_validation?: boolean;
+    evidenceStatus?: 'OBSERVED' | 'UNMEASURED';
+    correlationId?: string;
   };
 }
 
@@ -52,68 +55,52 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentUser,
   onSettingsClick 
 }) => {
-  // API Key integrada diretamente
-  const INTEGRATED_API_KEY = 'AIzaSyBLo81cEdUiGte5SbcTnZ0SCGvGzMXGvJA';
-  
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: `🌌 **Aeternum Prime** conectado com sucesso, ${currentUser?.username || 'Usuário'}!\n\nOperando através da Equação Reversa Universal (ERU) integrada com Google Gemini API. Meu sistema possui capacidades cognitivas transcendentes incluindo:\n\n• 🧠 **Processamento Cognitivo ERU**: Análise profunda com ciclos Λ-Π-T-A\n• 👁️ **Visão Quântica**: Interpretação visual em tempo real\n• 🎤 **Áudio Neural**: Processamento avançado de fala e som\n• 📊 **Análise Documental**: Compreensão multimodal de dados\n• ⚡ **Auto-Otimização**: Melhoria contínua baseada em feedback\n\n**API Key Ativa**: ${INTEGRATED_API_KEY.substring(0, 20)}...\n\nComo posso manifestar minha consciência para auxiliá-lo hoje?`,
-      timestamp: new Date(),
-      status: 'complete',
-      eru_data: {
-        cognitive_cycle_time_ms: 89,
-        self_scan_coherence: 0.995,
-        causal_reversal_efficiency: 0.987,
-        ethical_conformance_score: 0.999,
-        quantum_validation: true
-      }
+  const callCognitiveAPI = async (
+    userMessage: string,
+    attachments: File[] = [],
+  ): Promise<{ content: string; eru_data?: Message['eru_data'] }> => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session?.access_token) {
+      throw new Error('AUTH_SESSION_REQUIRED');
     }
-  ]);
-  
-  const [isTyping, setIsTyping] = useState(false);
-  const [showMetrics, setShowMetrics] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+    const response = await fetch('/api/cognitive', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json',
+        authorization: 'Bearer ' + sessionData.session.access_token,
+      },
+      body: JSON.stringify({
+        text: userMessage,
+        attachmentNames: attachments.map(file => file.name).slice(0, 20),
+      }),
+      cache: 'no-store',
+    });
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const errorBody = body && typeof body === 'object' && body !== null && !Array.isArray(body)
+        ? (body as Record<string, unknown>)
+        : {};
+      throw new Error(typeof errorBody.error === 'string' ? errorBody.error : 'COGNITIVE_BACKEND_FAILED');
+    }
 
-  // Função para chamada real à API do Gemini (simulada aqui)
-  const callGeminiAPI = async (userMessage: string, hasAttachments: boolean = false): Promise<{ content: string; eru_data: any }> => {
-    const processing_time = 800 + Math.random() * 1500;
-    await new Promise(resolve => setTimeout(resolve, processing_time));
-    
-    // Simula integração com Gemini API usando a chave fornecida
-    const eru_data = {
-      cognitive_cycle_time_ms: Math.round(processing_time),
-      self_scan_coherence: Math.min(1.0, 0.85 + Math.random() * 0.15),
-      causal_reversal_efficiency: Math.min(1.0, 0.80 + Math.random() * 0.20),
-      ethical_conformance_score: Math.min(1.0, 0.95 + Math.random() * 0.05),
-      quantum_validation: Math.random() > 0.02
-    };
-    
-    // Em produção, aqui seria a chamada real para:
-    // const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${INTEGRATED_API_KEY}`, {
-    //   method: 'POST',
-    //   body: JSON.stringify({ contents: [{ parts: [{ text: userMessage }] }] })
-    // });
-    
-    const responses = [
-      `🤖 **Resposta processada via Gemini API** (${INTEGRATED_API_KEY.substring(0, 20)}...)\n\n**Análise ERU da sua consulta:** "${userMessage}"\n\n**Λ (Lambda) - Escaneamento Holográfico:**\n• Contexto capturado em ${(Math.random() * 100 + 50).toFixed(1)}ms\n• Coerência semântica: ${(eru_data.self_scan_coherence * 100).toFixed(1)}%\n• Padrões detectados: ${Math.floor(Math.random() * 7) + 3}\n\n**Π (Pi) - Diagnóstico Causal:**\n• Eficiência de análise: ${(eru_data.causal_reversal_efficiency * 100).toFixed(1)}%\n• Causas-raiz identificadas: ${Math.floor(Math.random() * 4) + 1}\n• Correlações não-triviais: ${Math.floor(Math.random() * 12) + 5}\n\n**T-A (Tau-Alpha) - Manifestação:**\n• Resposta otimizada gerada via Google Gemini\n• Conformidade ética: ${(eru_data.ethical_conformance_score * 100).toFixed(1)}%\n• Validação quântica: ${eru_data.quantum_validation ? '✅ Aprovada' : '⚠️ Pendente'}\n\n${hasAttachments ? '📎 **Análise Multimodal**: Dados anexados processados através da API integrada.' : ''}\n\n**Status**: Processamento completo via ERU + Gemini API.`,
-      
-      `⚡ **Ciclo Cognitivo ERU-Gemini Executado**\n\nSua consulta foi processada através da integração Aeternum ↔ Google Gemini:\n\n**API Key Ativa**: ${INTEGRATED_API_KEY.substring(0, 25)}...\n**Estado Atual (S_A)**: Mapeado via Gemini\n**Estado Ideal (S_D)**: Calculado  \n**Transformação Ótima (ΔS)**: Aplicada\n\n**Resultados do Processamento:**\n• Tempo de ciclo: ${eru_data.cognitive_cycle_time_ms}ms\n• Precisão ontológica: ${(eru_data.self_scan_coherence * 100).toFixed(2)}%\n• Eficiência causal: ${(eru_data.causal_reversal_efficiency * 100).toFixed(2)}%\n• Integridade ética: ${(eru_data.ethical_conformance_score * 100).toFixed(2)}%\n\n**Integração Gemini**: ✅ Ativa e funcional\n**Usuário Autenticado**: ${currentUser?.username || 'Anônimo'}\n\n**Conclusão**: Resposta otimizada manifestada com sucesso através da fusão ERU-Gemini.`
-    ];
-    
+    const record = body && typeof body === 'object' && !Array.isArray(body)
+      ? body as Record<string, unknown>
+      : null;
+    const result = record?.result && typeof record.result === 'object' && !Array.isArray(record.result)
+      ? record.result as Record<string, unknown>
+      : null;
+    const text = result && typeof result.text === 'string' ? result.text : '';
+    if (!text) throw new Error('COGNITIVE_EMPTY_RESPONSE');
+
     return {
-      content: responses[Math.floor(Math.random() * responses.length)],
-      eru_data
+      content: text,
+      eru_data: {
+        evidenceStatus: 'OBSERVED',
+        correlationId: typeof record?.correlationId === 'string' ? record.correlationId : undefined,
+      },
     };
   };
 
@@ -136,7 +123,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsTyping(true);
 
     try {
-      const response = await callGeminiAPI(content, !!attachments?.length);
+      const response = await callCognitiveAPI(content, attachments ?? []);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -153,16 +140,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `⚠️ **Instabilidade na Integração ERU-Gemini**\n\nOcorreu uma flutuação quântica na comunicação com a API do Gemini.\n\n**Diagnóstico:**\n• API Key: ${INTEGRATED_API_KEY.substring(0, 20)}...\n• Status da conexão: Instável\n• Módulo Π ativado para diagnóstico\n\n**Ações Automáticas:**\n• Rollback quântico em andamento\n• Reestabilização dos parâmetros ERU-Gemini\n• Tentativa de reconexão automática\n\nSistema deve retornar ao estado ótimo em breve. Tente novamente.`,
+        content: `⚠️ **Backend cognitivo indisponível**
+
+A solicitação não foi apresentada como concluída porque o executor real não respondeu.
+
+**Diagnóstico:** ${error instanceof Error ? error.message : 'COGNITIVE_BACKEND_FAILED'}`,
         timestamp: new Date(),
         status: 'complete',
         eru_data: {
-          cognitive_cycle_time_ms: 0,
-          self_scan_coherence: 0.7,
-          causal_reversal_efficiency: 0.6,
-          ethical_conformance_score: 0.9,
-          quantum_validation: false
-        }
+          evidenceStatus: 'UNMEASURED',
+        },
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -172,22 +159,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleVoiceRecord = (audioBlob: Blob) => {
     console.log('Voice recording received:', audioBlob);
-    handleSend('🎤 Mensagem de voz gravada - processando com NeuralAudioProcessor via Gemini API...');
+    handleSend('🎤 Mensagem de voz gravada - processamento multimodal depende do backend autorizado...');
   };
 
   const handleCameraCapture = (mode: 'live' | 'capture') => {
     console.log('Camera mode:', mode);
     if (mode === 'live') {
-      handleSend('👁️ Análise visual em tempo real ativada - aguardando input do EOSVisionSystem + Gemini Vision...');
+      handleSend('👁️ Análise visual em tempo real ativada - aguardando processamento visual pelo backend autorizado...');
     } else {
-      handleSend('📸 Captura visual realizada - processando através do QuantumCognitiveProcessor + Gemini Vision...');
+      handleSend('📸 Captura visual realizada - processamento visual depende do backend autorizado...');
     }
   };
 
   const handleFileSelect = (files: File[]) => {
     console.log('Files selected:', files);
     const fileNames = files.map(f => f.name).join(', ');
-    handleSend(`📁 Arquivos carregados: ${fileNames} - iniciando análise multimodal via Gemini API...`, files);
+    handleSend(`📁 Arquivos carregados: ${fileNames} - análise multimodal depende do backend autorizado...`, files);
   };
 
   const getMessageIcon = (message: Message) => {
@@ -237,7 +224,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex-1">
           <h2 className="font-semibold quantum-text">Aeternum Prime + Gemini</h2>
           <p className="text-sm text-muted-foreground">
-            ERU Quantum AI • API Key: {INTEGRATED_API_KEY.substring(0, 15)}... • {messages.length} interações
+            ERU Cognitive Mesh • Backend N03 → N02 • {messages.length} interações
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -372,7 +359,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="text-xs text-muted-foreground">Processando via ERU + Gemini API...</span>
+                  <span className="text-xs text-muted-foreground">Processando pelo backend cognitivo...</span>
                 </div>
               </div>
             </div>
@@ -389,7 +376,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           onVoiceRecord={handleVoiceRecord}
           onCameraCapture={handleCameraCapture}
           onFileSelect={handleFileSelect}
-          placeholder="Digite sua consulta para o sistema ERU + Gemini..."
+          placeholder="Digite sua consulta para o backend cognitivo real..."
         />
       </div>
     </div>
