@@ -1,7 +1,7 @@
 name: N05 validation diagnostics
 on:
   push:
-    branches: [main]
+    branches: [main, soul-clareira-symbiosis-2026-09-22]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -39,6 +39,8 @@ jobs:
         run: bun run typecheck
       - name: Pair fusion tests
         run: bun run test:pair-fusion
+      - name: Clareira symbiosis contract
+        run: node scripts/clareira-symbiosis-contract-check.mjs
       - name: Emergency diagnostics
         if: failure()
         run: bun scripts/diagnostics.mjs
