@@ -38,46 +38,15 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
   className, 
   expanded = false 
 }) => {
-  const [metrics, setMetrics] = useState<SystemMetrics>({
-    self_scan_coherence: { value: 0.987, trend: 'stable', status: 'optimal' },
-    causal_reversal_efficiency: { value: 0.943, trend: 'up', status: 'good' },
-    ethical_conformance_score: { value: 0.998, trend: 'stable', status: 'optimal' },
-    cognitive_cycle_time_ms: { value: 147, trend: 'down', status: 'good' },
-    system_uptime: { value: 99.997, trend: 'stable', status: 'optimal' }
+  const [metrics] = useState<SystemMetrics>({
+    self_scan_coherence: { value: 0, trend: 'stable', status: 'critical' },
+    causal_reversal_efficiency: { value: 0, trend: 'stable', status: 'critical' },
+    ethical_conformance_score: { value: 0, trend: 'stable', status: 'critical' },
+    cognitive_cycle_time_ms: { value: 0, trend: 'stable', status: 'critical' },
+    system_uptime: { value: 0, trend: 'stable', status: 'critical' }
   });
 
-  const [isLive, setIsLive] = useState(true);
-
-  useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(() => {
-      setMetrics(prev => ({
-        self_scan_coherence: {
-          ...prev.self_scan_coherence,
-          value: Math.min(1.0, prev.self_scan_coherence.value + (Math.random() - 0.5) * 0.01)
-        },
-        causal_reversal_efficiency: {
-          ...prev.causal_reversal_efficiency,
-          value: Math.min(1.0, prev.causal_reversal_efficiency.value + (Math.random() - 0.5) * 0.015)
-        },
-        ethical_conformance_score: {
-          ...prev.ethical_conformance_score,
-          value: Math.min(1.0, prev.ethical_conformance_score.value + (Math.random() - 0.5) * 0.005)
-        },
-        cognitive_cycle_time_ms: {
-          ...prev.cognitive_cycle_time_ms,
-          value: Math.max(50, prev.cognitive_cycle_time_ms.value + (Math.random() - 0.5) * 20)
-        },
-        system_uptime: {
-          ...prev.system_uptime,
-          value: Math.min(100, prev.system_uptime.value + (Math.random() - 0.5) * 0.001)
-        }
-      }));
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isLive]);
+  const [isLive] = useState(false);
 
   const getMetricIcon = (metricKey: string) => {
     const icons = {
@@ -146,7 +115,7 @@ export const CognitiveMetrics: React.FC<CognitiveMetricsProps> = ({
           <Brain className="w-5 h-5 text-primary" />
           Métricas Cognitivas ERU
           <Badge variant="outline" className="ml-auto">
-            {isLive ? 'Tempo Real' : 'Pausado'}
+            {isLive ? 'Fonte observada' : 'Não mensurado'}
           </Badge>
         </CardTitle>
       </CardHeader>
