@@ -51,6 +51,20 @@ export default async function handler(req:any,res:any){
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
   if(!validateMessage(m) || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
   if(!meshAuthorized(req,m)) return res.status(401).json({error:'UNAUTHORIZED'});
+  if(m.capability==='octacore.execute'){
+    if(!m.payload||typeof m.payload!=='object'||Array.isArray(m.payload)) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_PAYLOAD_MUST_BE_OBJECT'},400);
+    const octa=m.payload as {capability?:unknown;payload?:unknown;job_id?:unknown};
+    const innerCapability=typeof octa.capability==='string'?octa.capability.trim():'';
+    if(!innerCapability) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_CAPABILITY_REQUIRED'},400);
+    if(!router.has(innerCapability)) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_CAPABILITY_NOT_EXECUTABLE',capability:innerCapability},501);
+    try{
+      const nested={...m,capability:innerCapability,payload:octa.payload};
+      const value=await router.dispatch(nested);
+      return response(res,m,'octacore.execute',{ok:true,kernel:'G3',nucleus:NUCLEUS_ID,capability:innerCapability,job_id:typeof octa.job_id==='string'?octa.job_id:undefined,value});
+    }catch(error:any){
+      return response(res,m,'octacore.execute',{code:'OCTACORE_N03_EXECUTION_ERROR',capability:innerCapability,detail:error?.message||String(error)},502);
+    }
+  }
   if(m.capability?.startsWith('sara.')){try{return response(res,m,m.capability,await callSara(m.capability,m.payload,m.correlationId));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'SARA_REQUEST_FAILED'},502);}}
   if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
   if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
