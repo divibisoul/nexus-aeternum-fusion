@@ -18,6 +18,10 @@ export class SoulMeshRouter {
     this.agents.register(createSoulMeshAgent(`N03.${capability}.agent`, [capability], handler));
   }
 
+  has(capability: string) {
+    return this.handlers.has(capability);
+  }
+
   async dispatch(message: SoulMeshMessage) {
     if (!this.handlers.has(message.capability)) {
       throw new Error(`CAPABILITY_HANDLER_NOT_REGISTERED:${message.capability}`);

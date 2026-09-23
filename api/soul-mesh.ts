@@ -15,9 +15,33 @@ const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
 const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = () => ['octacore.execute','mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
-function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
+function response(res:any, m:any, capability:string, payload:unknown, status=200){
+  const id=crypto.randomUUID();
+  const nonce=crypto.randomUUID();
+  const timestamp=Date.now();
+  const kind=status>=400?'error':'response';
+  const legacy={
+    version:'1.0',
+    contractVersion:SOUL_MESH_CONTRACT_VERSION,
+    messageId:id,
+    source:NUCLEUS_ID,
+    target:m?.source||NUCLEUS_ID,
+    timestamp,
+    nonce,
+    correlationId:m?.correlationId||crypto.randomUUID(),
+    type:kind==='error'?'ERROR':'TASK_RESULT',
+    payload:{capability,payload},
+  };
+  const secret=String(process.env.SOUL_MESH_HMAC_SECRET||'').trim();
+  const hmac=secret?crypto.createHmac('sha256',secret).update(JSON.stringify(legacy),'utf8').digest('hex'):'';
+  return res.status(status).json({
+    protocol:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,id,correlationId:legacy.correlationId,
+    source:NUCLEUS_ID,target:m?.source||NUCLEUS_ID,kind,capability,payload,timestamp,nonce,
+    ...(hmac?{hmac}:{}),
+  });
+}
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
@@ -51,9 +75,23 @@ export default async function handler(req:any,res:any){
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
   if(!validateMessage(m) || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
   if(!meshAuthorized(req,m)) return res.status(401).json({error:'UNAUTHORIZED'});
-  if(m.capability?.startsWith('sara.')){try{return response(res,m,m.capability,await callSara(m.capability,m.payload,m.correlationId));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'SARA_REQUEST_FAILED'},502);}}
   if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
   if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
+  if(m.capability==='octacore.execute'){
+    if(!m.payload||typeof m.payload!=='object'||Array.isArray(m.payload)) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_PAYLOAD_MUST_BE_OBJECT'},400);
+    const octa=m.payload as {capability?:unknown;payload?:unknown;job_id?:unknown};
+    const innerCapability=typeof octa.capability==='string'?octa.capability.trim():'';
+    if(!innerCapability) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_CAPABILITY_REQUIRED'},400);
+    if(!router.has(innerCapability)) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_CAPABILITY_NOT_EXECUTABLE',capability:innerCapability},501);
+    try{
+      const nested={...m,capability:innerCapability,payload:octa.payload};
+      const value=await router.dispatch(nested);
+      return response(res,m,'octacore.execute',{ok:true,kernel:'G3',nucleus:NUCLEUS_ID,capability:innerCapability,job_id:typeof octa.job_id==='string'?octa.job_id:undefined,value});
+    }catch(error:any){
+      return response(res,m,'octacore.execute',{code:'OCTACORE_N03_EXECUTION_ERROR',capability:innerCapability,detail:error?.message||String(error)},502);
+    }
+  }
+  if(m.capability?.startsWith('sara.')){try{return response(res,m,m.capability,await callSara(m.capability,m.payload,m.correlationId));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'SARA_REQUEST_FAILED'},502);}}
   try { const payload=await router.dispatch(m); return response(res,m,m.capability,payload); }
   catch(error:any){ const code=error?.message||'N03_CAPABILITY_FAILED'; const status=code.startsWith('CAPABILITY_HANDLER_NOT_REGISTERED')||code.startsWith('AGENT_NOT_AVAILABLE')?501:502; return response(res,m,m.capability,{code,provider:code.startsWith('GEMINI_')?'gemini':undefined},status); }
 }
