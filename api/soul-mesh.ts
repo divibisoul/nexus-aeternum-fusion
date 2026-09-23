@@ -17,7 +17,31 @@ const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
 const declaredCapabilities = () => ['octacore.execute','mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
-function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
+function response(res:any, m:any, capability:string, payload:unknown, status=200){
+  const id=crypto.randomUUID();
+  const nonce=crypto.randomUUID();
+  const timestamp=Date.now();
+  const kind=status>=400?'error':'response';
+  const legacy={
+    version:'1.0',
+    contractVersion:SOUL_MESH_CONTRACT_VERSION,
+    messageId:id,
+    source:NUCLEUS_ID,
+    target:m?.source||NUCLEUS_ID,
+    timestamp,
+    nonce,
+    correlationId:m?.correlationId||crypto.randomUUID(),
+    type:kind==='error'?'ERROR':'TASK_RESULT',
+    payload:{capability,payload},
+  };
+  const secret=String(process.env.SOUL_MESH_HMAC_SECRET||'').trim();
+  const hmac=secret?crypto.createHmac('sha256',secret).update(JSON.stringify(legacy),'utf8').digest('hex'):'';
+  return res.status(status).json({
+    protocol:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,id,correlationId:legacy.correlationId,
+    source:NUCLEUS_ID,target:m?.source||NUCLEUS_ID,kind,capability,payload,timestamp,nonce,
+    ...(hmac?{hmac}:{}),
+  });
+}
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
