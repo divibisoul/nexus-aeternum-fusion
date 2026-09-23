@@ -1,20 +1,15 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
+import {
   Activity,
   Brain,
   Database,
-  Shield,
-  Cpu,
   Network,
-  Settings,
   TrendingUp,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { CognitiveMetrics } from './CognitiveMetrics';
 
@@ -22,57 +17,69 @@ interface AuditPageProps {
   className?: string;
 }
 
+type ObservationStatus = 'observed' | 'not_observed';
+
+interface SystemComponentObservation {
+  name: string;
+  status: ObservationStatus;
+  uptime: string | null;
+  load: string | null;
+  description: string;
+}
+
+const systemComponents: SystemComponentObservation[] = [
+  {
+    name: 'Serviço ERU Transcendente',
+    status: 'not_observed',
+    uptime: null,
+    load: null,
+    description: 'Motor central de processamento cognitivo; runtime não conectado a esta tela.',
+  },
+  {
+    name: 'Módulo T-A (Auto-Gênese)',
+    status: 'not_observed',
+    uptime: null,
+    load: null,
+    description: 'Sistema de adaptação e evolução; execução precisa de evidência do runtime.',
+  },
+  {
+    name: 'Módulo Λ (Escaneamento)',
+    status: 'not_observed',
+    uptime: null,
+    load: null,
+    description: 'Análise de estado; nenhuma telemetria foi fornecida ao componente.',
+  },
+  {
+    name: 'Módulo Π (Diagnóstico)',
+    status: 'not_observed',
+    uptime: null,
+    load: null,
+    description: 'Diagnóstico causal reverso; nenhum resultado foi fornecido ao componente.',
+  },
+];
+
+const HISTORICAL_LEGACY_LOGS = [
+  '[INFO] 2024-01-25 14:23:45 - ERU Cycle #1247 completed successfully',
+  '[DEBUG] 2024-01-25 14:23:44 - Self-scan coherence: 0.987 (optimal)',
+  '[WARN] 2024-01-25 14:23:43 - Causal efficiency below threshold, triggering optimization',
+  '[INFO] 2024-01-25 14:23:42 - T-A module generated new response pattern',
+  '[DEBUG] 2024-01-25 14:23:41 - Quantum validation passed: 99.97% similarity',
+] as const;
+
 export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
-  const systemComponents = [
-    {
-      name: 'Serviço ERU Transcendente',
-      status: 'optimal',
-      uptime: '99.97%',
-      load: '23%',
-      description: 'Motor central de processamento cognitivo'
-    },
-    {
-      name: 'Módulo T-A (Auto-Gênese)',
-      status: 'good',
-      uptime: '99.94%',
-      load: '45%',
-      description: 'Sistema de adaptação e evolução'
-    },
-    {
-      name: 'Módulo Λ (Escaneamento)',
-      status: 'optimal',
-      uptime: '100%',
-      load: '67%',
-      description: 'Análise holográfica de estado'
-    },
-    {
-      name: 'Módulo Π (Diagnóstico)',
-      status: 'good',
-      uptime: '99.99%',
-      load: '34%',
-      description: 'Diagnóstico causal reverso'
-    }
-  ];
+  const getStatusIcon = (status: ObservationStatus) => (
+    status === 'observed'
+      ? <CheckCircle className="w-4 h-4 text-green-400" />
+      : <AlertTriangle className="w-4 h-4 text-gray-500" />
+  );
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'optimal': return <CheckCircle className="w-4 h-4 text-green-400" />;
-      case 'good': return <Activity className="w-4 h-4 text-blue-400" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
-      default: return <AlertTriangle className="w-4 h-4 text-red-400" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'optimal': return 'border-green-400/20 bg-green-400/10';
-      case 'good': return 'border-blue-400/20 bg-blue-400/10';
-      case 'warning': return 'border-yellow-400/20 bg-yellow-400/10';
-      default: return 'border-red-400/20 bg-red-400/10';
-    }
-  };
+  const getStatusColor = (status: ObservationStatus) => (
+    status === 'observed'
+      ? 'border-green-400/20 bg-green-400/10'
+      : 'border-gray-600/40 bg-gray-800/30'
+  );
 
   return (
     <div className={className}>
@@ -80,7 +87,7 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold quantum-text">Auditoria Interna ERU</h1>
           <Badge variant="outline" className="quantum-border">
-            Sistema Operacional
+            Estado não observado
           </Badge>
         </div>
 
@@ -95,7 +102,7 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <CognitiveMetrics expanded={true} />
-              
+
               <Card className="quantum-border bg-card/50 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -106,25 +113,20 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
-                      Arquitetura distribuída com 4 módulos principais
+                      O desenho lógico é distribuído; estado operacional E2E não está observado nesta tela.
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="p-2 bg-primary/10 rounded border">
-                        <strong>API Gateway</strong><br/>
-                        Latência: 12ms
-                      </div>
-                      <div className="p-2 bg-secondary/10 rounded border">
-                        <strong>Base Conhecimento</strong><br/>
-                        Consultas: 1.2M/s
-                      </div>
-                      <div className="p-2 bg-accent/10 rounded border">
-                        <strong>Cache Redis</strong><br/>
-                        Hit Rate: 94.7%
-                      </div>
-                      <div className="p-2 bg-primary/10 rounded border">
-                        <strong>Quantum Validator</strong><br/>
-                        Validações: 99.99%
-                      </div>
+                      {[
+                        'API Gateway',
+                        'Base de Conhecimento',
+                        'Cache / Memória',
+                        'Validador / Governança',
+                      ].map(name => (
+                        <div key={name} className="p-2 bg-primary/10 rounded border">
+                          <strong>{name}</strong><br />
+                          Estado: N/O
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
@@ -134,8 +136,8 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
 
           <TabsContent value="components" className="space-y-4">
             <div className="grid gap-4">
-              {systemComponents.map((component, index) => (
-                <Card key={index} className={`quantum-border ${getStatusColor(component.status)}`}>
+              {systemComponents.map(component => (
+                <Card key={component.name} className={'quantum-border ' + getStatusColor(component.status)}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -146,8 +148,8 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
                         </div>
                       </div>
                       <div className="text-right text-sm">
-                        <div className="font-mono">Uptime: {component.uptime}</div>
-                        <div className="font-mono">Load: {component.load}</div>
+                        <div className="font-mono">Uptime: {component.uptime ?? 'N/O'}</div>
+                        <div className="font-mono">Load: {component.load ?? 'N/O'}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -165,42 +167,20 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Throughput</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Consultas/segundo:</span>
-                        <span className="font-mono">1.247</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Operações ERU/segundo:</span>
-                        <span className="font-mono">847</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Ciclos de otimização:</span>
-                        <span className="font-mono">12/min</span>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  {[
+                    ['Consultas/segundo', 'N/O'],
+                    ['Operações ERU/segundo', 'N/O'],
+                    ['Ciclos de otimização', 'N/O'],
+                    ['Tempo médio resposta', 'N/O'],
+                    ['P95 latência', 'N/O'],
+                    ['P99 latência', 'N/O'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex justify-between border-b border-gray-700/50 pb-2">
+                      <span>{label}:</span>
+                      <span className="font-mono">{value}</span>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <h4 className="font-medium">Latência</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Tempo médio resposta:</span>
-                        <span className="font-mono">147ms</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>P95 latência:</span>
-                        <span className="font-mono">230ms</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>P99 latência:</span>
-                        <span className="font-mono">450ms</span>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -215,23 +195,19 @@ export const AuditPage: React.FC<AuditPageProps> = ({ className }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 font-mono text-xs">
-                  <div className="p-2 bg-green-400/10 border border-green-400/20 rounded">
-                    <span className="text-green-400">[INFO]</span> 2024-01-25 14:23:45 - ERU Cycle #1247 completed successfully
-                  </div>
-                  <div className="p-2 bg-blue-400/10 border border-blue-400/20 rounded">
-                    <span className="text-blue-400">[DEBUG]</span> 2024-01-25 14:23:44 - Self-scan coherence: 0.987 (optimal)
-                  </div>
-                  <div className="p-2 bg-yellow-400/10 border border-yellow-400/20 rounded">
-                    <span className="text-yellow-400">[WARN]</span> 2024-01-25 14:23:43 - Causal efficiency below threshold, triggering optimization
-                  </div>
-                  <div className="p-2 bg-green-400/10 border border-green-400/20 rounded">
-                    <span className="text-green-400">[INFO]</span> 2024-01-25 14:23:42 - T-A module generated new response pattern
-                  </div>
-                  <div className="p-2 bg-blue-400/10 border border-blue-400/20 rounded">
-                    <span className="text-blue-400">[DEBUG]</span> 2024-01-25 14:23:41 - Quantum validation passed: 99.97% similarity
-                  </div>
+                <div className="p-3 mb-4 rounded border border-yellow-500/20 bg-yellow-500/5 text-xs text-gray-400">
+                  Nenhum log operacional atual foi fornecido a esta tela. Os registros abaixo são preservados exclusivamente como histórico legado e não representam o estado atual.
                 </div>
+                <details className="rounded border border-gray-700 bg-gray-900/40 p-3">
+                  <summary className="cursor-pointer text-sm text-gray-300">Abrir histórico legado</summary>
+                  <div className="mt-3 space-y-2 font-mono text-xs">
+                    {HISTORICAL_LEGACY_LOGS.map(log => (
+                      <div key={log} className="p-2 bg-gray-800/60 rounded">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </details>
               </CardContent>
             </Card>
           </TabsContent>
