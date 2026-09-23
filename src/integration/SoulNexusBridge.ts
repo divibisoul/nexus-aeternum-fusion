@@ -1,4 +1,4 @@
-import type { SoulMeshMessage } from '../soul-mesh/SoulMeshProtocol';
+import type { SoulMeshMessage } from '../mesh/SoulMeshProtocol';
 import { SoulMeshSupabaseTransport } from '../soul-mesh/SoulMeshSupabaseTransport';
 import { nexusCoreProcessor, type NexusCoreCapability } from '../core/NexusCoreProcessor';
 
