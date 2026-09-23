@@ -1,3 +1,8 @@
+/**
+ * @deprecated compatibility facade retained for legacy callers.
+ * Active N03 runtime integrations use src/mesh/SoulMeshProtocol.ts as the
+ * canonical soul-mesh/1@1.1.0 contract. No legacy API was removed here.
+ */
 export type SoulNucleus = 'aeternum' | 'nexus' | 'eternium' | 'chatbot' | 'chatbots' | 'chatbot-2000';
 export interface SoulMeshMessage<T = unknown> { protocol: 'soul-mesh/1'; id: string; correlationId: string; source: SoulNucleus; target: SoulNucleus; kind: 'request' | 'response' | 'event' | 'error'; capability?: string; payload: T; timestamp: number; }
 export interface SoulMeshTransport { send(message: SoulMeshMessage): Promise<void>; onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void; }
