@@ -44,7 +44,6 @@ const Index = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('aeternum_api_key');
     setIsAuthenticated(false);
     setUser(null);
   };
@@ -110,7 +109,7 @@ const Index = () => {
 
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <span className="text-xs font-medium">ERU Online</span>
+                <span className="text-xs font-medium">ERU: estado não observado</span>
               </div>
               
               <Button 
@@ -161,7 +160,6 @@ const Index = () => {
             <TabsContent value="aeternum" className="flex-1 m-0">
               <div className="h-[calc(100vh-160px)]">
                 <ChatInterface 
-                  apiKey={localStorage.getItem('aeternum_api_key')}
                   currentUser={user}
                   onSettingsClick={() => setActiveTab('settings')}
                 />
