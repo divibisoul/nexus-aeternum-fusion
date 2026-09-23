@@ -1,5 +1,5 @@
-import { N03AgentRegistry } from "../../lib/soul-mesh/N03AgentRegistry";
-import type { N03Agent } from "../../lib/soul-mesh/N03AgentContract";
+import { N03AgentRegistry } from "../../../lib/soul-mesh/N03AgentRegistry";
+import type { N03Agent } from "../../../lib/soul-mesh/N03AgentContract";
 
 export type AgentCardProjection = {
   id: string;
