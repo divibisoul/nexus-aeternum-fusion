@@ -51,6 +51,8 @@ export default async function handler(req:any,res:any){
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
   if(!validateMessage(m) || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
   if(!meshAuthorized(req,m)) return res.status(401).json({error:'UNAUTHORIZED'});
+  if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
+  if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
   if(m.capability==='octacore.execute'){
     if(!m.payload||typeof m.payload!=='object'||Array.isArray(m.payload)) return response(res,m,'octacore.execute',{code:'OCTACORE_N03_PAYLOAD_MUST_BE_OBJECT'},400);
     const octa=m.payload as {capability?:unknown;payload?:unknown;job_id?:unknown};
@@ -66,8 +68,6 @@ export default async function handler(req:any,res:any){
     }
   }
   if(m.capability?.startsWith('sara.')){try{return response(res,m,m.capability,await callSara(m.capability,m.payload,m.correlationId));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'SARA_REQUEST_FAILED'},502);}}
-  if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
-  if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
   try { const payload=await router.dispatch(m); return response(res,m,m.capability,payload); }
   catch(error:any){ const code=error?.message||'N03_CAPABILITY_FAILED'; const status=code.startsWith('CAPABILITY_HANDLER_NOT_REGISTERED')||code.startsWith('AGENT_NOT_AVAILABLE')?501:502; return response(res,m,m.capability,{code,provider:code.startsWith('GEMINI_')?'gemini':undefined},status); }
 }
