@@ -1,4 +1,4 @@
-import type { SoulMeshMessage, SoulMeshTransport } from '../soul-mesh/SoulMeshProtocol';
+import type { SoulMeshMessage, SoulMeshTransport } from '../mesh/SoulMeshProtocol';
 export class SoulMeshHttpTransport implements SoulMeshTransport {
   private listeners = new Set<(message: SoulMeshMessage) => void | Promise<void>>();
   constructor(private readonly endpoint: string) {}
