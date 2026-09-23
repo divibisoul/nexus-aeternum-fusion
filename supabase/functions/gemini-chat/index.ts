@@ -6,6 +6,7 @@ const corsHeaders = {
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-3.8-flash";
+const MAX_MESSAGE_CHARS = 100_000;
 
 interface GeminiChatRequest {
   message: string;
@@ -66,6 +67,12 @@ Deno.serve(async request => {
     if (!message) {
       return new Response(JSON.stringify({ error: "MESSAGE_REQUIRED" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return new Response(JSON.stringify({ error: "MESSAGE_TOO_LARGE", maxChars: MAX_MESSAGE_CHARS }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
