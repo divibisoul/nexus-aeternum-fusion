@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { SoulMeshPeerClient } from './SoulMeshPeerClient';
+import { SoulMeshPeerClient, type SuperGPUTask } from './SoulMeshPeerClient';
 import type { SoulNucleus } from './SoulMeshProtocol';
 
 export type N03SynergyStep = {
@@ -26,9 +26,30 @@ export type N03FusionResult = {
   fusion: { synergy: number; inputs: unknown[] };
 };
 
+export type N03SuperGPUResult = {
+  correlationId: string;
+  payload: unknown;
+};
+
+export type N04ToolRequest = {
+  tool: 'createDocument' | 'updateDocument' | 'getWeather' | 'requestSuggestions';
+  arguments?: unknown;
+};
+
+function normalizeN04ToolRequest(input: unknown): N04ToolRequest {
+  if (!input || typeof input !== 'object' || !('tool' in input) || typeof (input as { tool?: unknown }).tool !== 'string') {
+    throw new Error('N04_TOOL_REQUEST_REQUIRED');
+  }
+  const tool = (input as { tool: string }).tool;
+  if (!['createDocument', 'updateDocument', 'getWeather', 'requestSuggestions'].includes(tool)) {
+    throw new Error(`N04_TOOL_NOT_DECLARED:${tool}`);
+  }
+  return input as N04ToolRequest;
+}
+
 /**
  * N03 composition layer: joins N03 perception/audio with complementary peer AI
- * capabilities without creating a second transport or Mesh.
+ * capabilities and N07 SuperGPU orchestration without creating a second transport.
  */
 export class N03SynergyOrchestrator {
   constructor(private readonly peers = new SoulMeshPeerClient('N03')) {}
@@ -38,25 +59,39 @@ export class N03SynergyOrchestrator {
     const results: N03SynergyResult['steps'] = [];
     for (const step of steps) {
       const payload = previous === undefined ? step.payload : { input: step.payload, previous, correlationId };
-      const result = await this.peers.request(step.target, step.capability, payload);
+      const result = await this.peers.request(step.target, step.capability, payload, correlationId);
       results.push({ target: step.target, capability: step.capability, result });
       previous = result.payload;
     }
     return { correlationId, steps: results };
   }
 
+  async superGPUExecute(values: number[], operation = 'identity', device?: string, correlationId = randomUUID()): Promise<N03SuperGPUResult> {
+    return { correlationId, payload: await this.peers.superGPUExecute(values, operation, device, correlationId) };
+  }
+
+  async superGPUParallel(tasks: SuperGPUTask[], correlationId = randomUUID()): Promise<N03SuperGPUResult> {
+    return { correlationId, payload: await this.peers.superGPUParallel(tasks, correlationId) };
+  }
+
   perceptionToReasoning(input: unknown) {
     return this.execute([{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }]);
   }
 
+  executeToolOnN04(request: N04ToolRequest, correlationId = randomUUID()) {
+    const toolRequest = normalizeN04ToolRequest(request);
+    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: toolRequest }], correlationId);
+  }
+
   perceptionToExecution(input: unknown) {
-    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }]);
+    return this.executeToolOnN04(normalizeN04ToolRequest(input));
   }
 
   perceptionReasoningExecution(input: unknown) {
+    const toolRequest = normalizeN04ToolRequest(input);
     return this.execute([
       { target: 'N02', capability: 'inference.reason', payload: { perception: input } },
-      { target: 'N04', capability: 'tool.execute', payload: { instruction: 'Execute the useful action derived from the reasoning result.' } },
+      { target: 'N04', capability: 'tool.execute', payload: toolRequest },
     ]);
   }
 
@@ -83,11 +118,12 @@ export class N03SynergyOrchestrator {
     };
   }
 
-  /** N03+N02 branch and N03+N04 branch execute together before fusion. */
-  perceptionDualFusion(input: unknown) {
+  /** N03+N02 reasoning and N03+N04 action execute together before fusion. */
+  perceptionDualFusion(input: unknown, toolRequest: N04ToolRequest) {
+    const normalizedToolRequest = normalizeN04ToolRequest(toolRequest);
     return this.fuseTwoBranches([
       { name: 'N03-N02-cognition', steps: [{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }] },
-      { name: 'N03-N04-action', steps: [{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }] },
+      { name: 'N03-N04-action', steps: [{ target: 'N04', capability: 'tool.execute', payload: normalizedToolRequest }] },
     ]);
   }
 }

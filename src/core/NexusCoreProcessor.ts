@@ -54,6 +54,7 @@ const DEFAULT_CAPABILITIES: readonly NexusCoreCapability[] = [
 export class NexusCoreProcessor {
   private pilot?: NexusPilotPort;
   private readonly capabilities = new Set<NexusCoreCapability>(DEFAULT_CAPABILITIES);
+  private readonly executors = new Map<NexusCoreCapability, (request: NexusCoreRequest) => Promise<unknown> | unknown>();
 
   setPilot(pilot: NexusPilotPort): void {
     this.pilot = pilot;
@@ -65,6 +66,18 @@ export class NexusCoreProcessor {
 
   getCapabilities(): NexusCoreCapability[] {
     return [...this.capabilities];
+  }
+
+  registerExecutor(
+    capability: NexusCoreCapability,
+    executor: (request: NexusCoreRequest) => Promise<unknown> | unknown,
+  ): void {
+    if (!this.capabilities.has(capability)) throw new Error('CAPABILITY_NOT_REGISTERED:' + capability);
+    this.executors.set(capability, executor);
+  }
+
+  clearExecutor(capability: NexusCoreCapability): void {
+    this.executors.delete(capability);
   }
 
   hasCapability(capability: string): capability is NexusCoreCapability {
@@ -80,20 +93,37 @@ export class NexusCoreProcessor {
       return this.forwardToPilot(request);
     }
 
-    // Existing local modules remain authoritative for their domain. The core
-    // returns a dispatch descriptor instead of inventing a second implementation.
-    return {
-      id: request.id,
-      capability: request.capability,
-      success: true,
-      output: {
-        dispatch: request.capability,
-        input: request.input,
-        context: request.context ?? {},
-        nucleus: 'eternium',
-        handledBy: 'nexus-core-processor',
-      },
-    };
+    const executor = this.executors.get(request.capability);
+    if (!executor) {
+      return {
+        id: request.id,
+        capability: request.capability,
+        success: false,
+        error: {
+          code: 'EXECUTOR_NOT_BOUND',
+          message: 'Capability ' + request.capability + ' is declared but has no executable runtime bound in NexusCoreProcessor.',
+        },
+      };
+    }
+
+    try {
+      return {
+        id: request.id,
+        capability: request.capability,
+        success: true,
+        output: await executor(request),
+      };
+    } catch (error) {
+      return {
+        id: request.id,
+        capability: request.capability,
+        success: false,
+        error: {
+          code: 'EXECUTOR_FAILED',
+          message: error instanceof Error ? error.message : String(error),
+        },
+      };
+    }
   }
 
   private isPilotTask(request: NexusCoreRequest): boolean {

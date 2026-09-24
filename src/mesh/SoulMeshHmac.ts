@@ -1,33 +1,35 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 
-const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const MAX_CLOCK_SKEW_MS = 30_000;
 const usedNonces = new Map<string, number>();
 
-function canonical(message: SoulMeshMessage): string {
+function canonical(message: SoulMeshMessage, nonce: string): string {
   return JSON.stringify({
     protocol: message.protocol,
-    version: message.version,
+    contractVersion: message.contractVersion,
     id: message.id,
     correlationId: message.correlationId,
     source: message.source,
     target: message.target,
     kind: message.kind,
-    capability: message.capability,
+    capability: message.capability ?? null,
     payload: message.payload,
     timestamp: message.timestamp,
-    nonce: message.nonce,
+    transport: message.meta?.transport ?? null,
+    meta: message.meta ?? null,
+    nonce,
   });
 }
 
-function signature(message: SoulMeshMessage, secret: string): string {
-  return createHmac('sha256', secret).update(canonical(message)).digest('hex');
+function signature(message: SoulMeshMessage, secret: string, nonce: string): string {
+  return createHmac('sha256', secret).update(canonical(message, nonce), 'utf8').digest('hex');
 }
 
-export function signSoulMeshMessage(message: SoulMeshMessage, secret: string): SoulMeshMessage {
+export function signSoulMeshMessage(message: SoulMeshMessage, secret: string): SoulMeshMessage & { nonce: string; hmac: string } {
   if (!secret) throw new Error('SOUL_MESH_HMAC_SECRET_REQUIRED');
-  const signed = { ...message, nonce: crypto.randomUUID() };
-  return { ...signed, hmac: signature(signed, secret) };
+  const nonce = crypto.randomUUID();
+  return { ...message, nonce, hmac: signature(message, secret, nonce) };
 }
 
 export function verifySoulMeshHmac(message: SoulMeshMessage, secret: string, now = Date.now()): boolean {
@@ -36,7 +38,7 @@ export function verifySoulMeshHmac(message: SoulMeshMessage, secret: string, now
   const key = `${message.source}:${message.nonce}`;
   const previous = usedNonces.get(key);
   if (previous !== undefined && now - previous <= MAX_CLOCK_SKEW_MS) return false;
-  const expected = Buffer.from(signature(message, secret), 'hex');
+  const expected = Buffer.from(signature(message, secret, message.nonce), 'hex');
   const supplied = Buffer.from(message.hmac, 'hex');
   if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return false;
   usedNonces.set(key, now);

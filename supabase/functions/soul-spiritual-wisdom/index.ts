@@ -65,7 +65,7 @@ const SPIRITUAL_KNOWLEDGE = {
     ayahuasca: {
       name: "Ayahuasca",
       description: "Medicina mestra da Amazônia, união da alma",
-      preparation: "Dieta de 3 dias, jejum de carnes e açúcar",
+      preparation: "Preparação varia por contexto e não é prescrita por este módulo; priorize orientação profissional e contexto legal/seguro.",
       effects: "Visões, cura emocional, conexão espiritual",
       duration: "4-8 horas",
       integration: "Dias de reflexão e anotações dos ensinamentos",
@@ -74,12 +74,10 @@ const SPIRITUAL_KNOWLEDGE = {
     psilocybe: {
       name: "Psilocibina (Cogumelos Sagrados)",
       description: "Medicina do renascimento, expansão da consciência", 
-      preparation: "Set & setting, jejum de 4 horas",
+      preparation: "Este módulo não prescreve jejum ou dose; priorize contexto seguro, consentimento e orientação qualificada.",
       lemontek: {
-        description: "Método de potencialização com limão",
-        recipe: "Moer cogumelos + suco de limão, aguardar 20min",
-        effects: "Início mais rápido (15-30min), duração menor (3-4h)",
-        potency: "Aumenta em 20-30% a potência"
+        description: "Não são fornecidas receitas ou técnicas de potencialização.",
+        safety: "O módulo fornece apenas informação geral e redução de danos."
       },
       effects: "Dissolução do ego, insights profundos, cura emocional",
       duration: "4-6 horas (normal), 3-4 horas (lemontek)",
@@ -330,7 +328,7 @@ function getPlantMedicineGuidance(query: string, user_level?: string) {
       medicine: 'psilocybe',
       guidance: guidance,
       soul_message: "🍄 Os cogumelos sagrados são professores gentis. Abra seu coração para os ensinamentos.",
-      user_level_advice: user_level === 'beginner' ? "Comece com 1-1.5g em ambiente seguro com trip sitter." : "Você já conhece o caminho. Confie na medicina."
+      user_level_advice: "Não são fornecidas doses ou instruções de consumo; priorize redução de danos, legalidade e suporte qualificado.",
     };
   }
   
@@ -441,12 +439,18 @@ async function getGeneralSpiritual_guidance(query: string, context: string, emot
     "Confie no processo. Mesmo quando não entender o caminho, ele está se desdobrando perfeitamente."
   ];
   
-  const randomWisdom = generalWisdom[Math.floor(Math.random() * generalWisdom.length)];
-  
+  const normalizedQuery = query.trim().toLowerCase();
+  let hash = 2166136261;
+  for (let index = 0; index < normalizedQuery.length; index++) {
+    hash ^= normalizedQuery.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  const selectedWisdom = generalWisdom[(hash >>> 0) % generalWisdom.length];
+
   return {
     type: 'general_guidance',
     query: query,
-    wisdom: randomWisdom,
+    wisdom: selectedWisdom,
     soul_message: "✨ Às vezes a resposta não está no conhecimento, mas no silêncio entre os pensamentos.",
     context: context,
     emotional_support: emotional_state ? `Vejo que você está passando por ${emotional_state}. Lembre-se: isso também passará.` : null,
