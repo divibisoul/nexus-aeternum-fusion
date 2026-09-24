@@ -7,7 +7,7 @@ N03 is an independent AI nucleus specialized in auditory perception, speech and 
 | Area | Implemented | Integrated | Tested | State |
 |---|---:|---:|---:|---|
 | Identity/protocol | 100% | 100% | structural | CLOSED |
-| Five peer relationships | 100% | 100% | live runtime pending | VALIDATION |
+| Six peer relationships | 100% | 100% | live runtime pending | VALIDATION |
 | Mesh input | 100% | 100% | runtime pending | VALIDATION |
 | Mesh output | 100% | 100% | runtime pending | VALIDATION |
 | Agent layer | 100% | 100% | structural | CLOSED |
@@ -27,7 +27,7 @@ The existing router and agent registry remain authoritative. The Mesh layer dele
 
 ## Mesh topology
 
-N03 has five bidirectional peer relationships: N01, N02, N04, N05 and N06. Registration now targets all five configured peer endpoints. Peer discovery and transport negotiation remain additive.
+N03 has six bidirectional peer relationships: N01, N02, N04, N05, N06 and N07. Registration now targets all five configured peer endpoints. Peer discovery and transport negotiation remain additive.
 
 ## Security
 

@@ -4,7 +4,7 @@ N03 (`nexus-aeternum-fusion`) é o núcleo destinado à percepção auditiva e �
 
 ## Soul Mesh — topologia K6
 
-N03 é um nó da rede circular de 6 núcleos. Ele possui cinco conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05 e N06**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
+N03 é um nó da rede federada de 7 núcleos SOUL. Ele possui seis conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05, N06 e N07**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
 
 A fundação Mesh está em `src/mesh/`:
 
@@ -17,9 +17,9 @@ A fundação Mesh está em `src/mesh/`:
 
 ## Capabilities auditivas e de fala
 
-- `audio.transcribe` — contrato para transcrição via Google Cloud Speech/Hugging Face.
-- `speech.synthesize` — contrato para síntese via Google Cloud Text-to-Speech.
-- `audio.analyze.emotion` — adapter/modelo de emoção pendente.
+- `audio.transcribe` — handler real via adaptador Gemini; credencial continua dependente do runtime.
+- `speech.synthesize` — handler real via adaptador Gemini; credencial continua dependente do runtime.
+- `audio.analyze.emotion` — handler real via adaptador Gemini; credencial continua dependente do runtime.
 - `speech.translate` — pipeline transcrição → tradução → fala, adapter pendente.
 - `audio.summarize` — resumo de áudio, runtime de IA pendente.
 - `audio.listen.continuous` — escuta contínua, runtime de áudio pendente.
