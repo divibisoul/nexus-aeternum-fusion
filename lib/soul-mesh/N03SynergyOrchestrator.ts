@@ -31,6 +31,22 @@ export type N03SuperGPUResult = {
   payload: unknown;
 };
 
+export type N04ToolRequest = {
+  tool: 'createDocument' | 'updateDocument' | 'getWeather' | 'requestSuggestions';
+  arguments?: unknown;
+};
+
+function normalizeN04ToolRequest(input: unknown): N04ToolRequest {
+  if (!input || typeof input !== 'object' || !('tool' in input) || typeof (input as { tool?: unknown }).tool !== 'string') {
+    throw new Error('N04_TOOL_REQUEST_REQUIRED');
+  }
+  const tool = (input as { tool: string }).tool;
+  if (!['createDocument', 'updateDocument', 'getWeather', 'requestSuggestions'].includes(tool)) {
+    throw new Error(`N04_TOOL_NOT_DECLARED:${tool}`);
+  }
+  return input as N04ToolRequest;
+}
+
 /**
  * N03 composition layer: joins N03 perception/audio with complementary peer AI
  * capabilities and N07 SuperGPU orchestration without creating a second transport.
@@ -62,14 +78,20 @@ export class N03SynergyOrchestrator {
     return this.execute([{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }]);
   }
 
+  executeToolOnN04(request: N04ToolRequest, correlationId = randomUUID()) {
+    const toolRequest = normalizeN04ToolRequest(request);
+    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: toolRequest }], correlationId);
+  }
+
   perceptionToExecution(input: unknown) {
-    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }]);
+    return this.executeToolOnN04(normalizeN04ToolRequest(input));
   }
 
   perceptionReasoningExecution(input: unknown) {
+    const toolRequest = normalizeN04ToolRequest(input);
     return this.execute([
       { target: 'N02', capability: 'inference.reason', payload: { perception: input } },
-      { target: 'N04', capability: 'tool.execute', payload: { instruction: 'Execute the useful action derived from the reasoning result.' } },
+      { target: 'N04', capability: 'tool.execute', payload: toolRequest },
     ]);
   }
 
