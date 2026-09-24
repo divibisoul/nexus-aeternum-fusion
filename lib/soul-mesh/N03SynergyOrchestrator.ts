@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { SoulMeshPeerClient } from './SoulMeshPeerClient';
+import { SoulMeshPeerClient, type SuperGPUTask } from './SoulMeshPeerClient';
 import type { SoulNucleus } from './SoulMeshProtocol';
 
 export type N03SynergyStep = {
@@ -26,9 +26,14 @@ export type N03FusionResult = {
   fusion: { synergy: number; inputs: unknown[] };
 };
 
+export type N03SuperGPUResult = {
+  correlationId: string;
+  payload: unknown;
+};
+
 /**
  * N03 composition layer: joins N03 perception/audio with complementary peer AI
- * capabilities without creating a second transport or Mesh.
+ * capabilities and N07 SuperGPU orchestration without creating a second transport.
  */
 export class N03SynergyOrchestrator {
   constructor(private readonly peers = new SoulMeshPeerClient('N03')) {}
@@ -38,11 +43,19 @@ export class N03SynergyOrchestrator {
     const results: N03SynergyResult['steps'] = [];
     for (const step of steps) {
       const payload = previous === undefined ? step.payload : { input: step.payload, previous, correlationId };
-      const result = await this.peers.request(step.target, step.capability, payload);
+      const result = await this.peers.request(step.target, step.capability, payload, correlationId);
       results.push({ target: step.target, capability: step.capability, result });
       previous = result.payload;
     }
     return { correlationId, steps: results };
+  }
+
+  async superGPUExecute(values: number[], operation = 'identity', device?: string, correlationId = randomUUID()): Promise<N03SuperGPUResult> {
+    return { correlationId, payload: await this.peers.superGPUExecute(values, operation, device, correlationId) };
+  }
+
+  async superGPUParallel(tasks: SuperGPUTask[], correlationId = randomUUID()): Promise<N03SuperGPUResult> {
+    return { correlationId, payload: await this.peers.superGPUParallel(tasks, correlationId) };
   }
 
   perceptionToReasoning(input: unknown) {
