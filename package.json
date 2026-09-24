@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test:pair-fusion": "bun test src/soul-mesh/N03PairFusion.test.ts",
+    "test:pair-fusion": "bun test src/soul-mesh/N03PairFusion.test.ts api/sara-context.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
