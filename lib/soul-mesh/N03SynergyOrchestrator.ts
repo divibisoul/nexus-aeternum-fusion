@@ -118,11 +118,12 @@ export class N03SynergyOrchestrator {
     };
   }
 
-  /** N03+N02 branch and N03+N04 branch execute together before fusion. */
-  perceptionDualFusion(input: unknown) {
+  /** N03+N02 reasoning and N03+N04 action execute together before fusion. */
+  perceptionDualFusion(input: unknown, toolRequest: N04ToolRequest) {
+    const normalizedToolRequest = normalizeN04ToolRequest(toolRequest);
     return this.fuseTwoBranches([
       { name: 'N03-N02-cognition', steps: [{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }] },
-      { name: 'N03-N04-action', steps: [{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }] },
+      { name: 'N03-N04-action', steps: [{ target: 'N04', capability: 'tool.execute', payload: normalizedToolRequest }] },
     ]);
   }
 }
