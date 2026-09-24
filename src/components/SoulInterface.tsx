@@ -30,7 +30,7 @@ interface SoulMessage {
   timestamp: Date;
   emotional_analysis?: {
     emotion: string;
-    confidence: number;
+    confidence?: number;
     guidance: string;
     frequency: string;
     ritual: string;
@@ -147,7 +147,6 @@ export const SoulInterface: React.FC<SoulInterfaceProps> = ({ user }) => {
         timestamp: new Date(),
         emotional_analysis: {
           emotion: data.emotion,
-          confidence: 0.8,
           guidance: data.spiritual_guidance,
           frequency: '',
           ritual: ''
