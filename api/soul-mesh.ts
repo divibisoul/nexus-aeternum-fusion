@@ -25,6 +25,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function saraPayload(capability: string, payload: unknown, correlationId: string): unknown {
+  if (capability === 'sara.hortacore.assess') {
+    if (!isRecord(payload) || !isRecord(payload.proposal) || typeof payload.proposal.description !== 'string' || !payload.proposal.description.trim()) {
+      throw new Error('SARA_HORTACORE_PROPOSAL_REQUIRED');
+    }
+    return { ...payload, proposal: { ...payload.proposal } };
+  }
   if (!['sara.cycle', 'sara.audit', 'sara.regenerate'].includes(capability)) return payload;
   if (!isRecord(payload)) throw new Error('SARA_PAYLOAD_MUST_BE_OBJECT');
   const out: Record<string, unknown> = { ...payload };
@@ -44,7 +50,7 @@ function saraPayload(capability: string, payload: unknown, correlationId: string
 
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
   if(!SARA_URL||(capability!=='sara.health'&&!SARA_TOKEN))throw new Error('SARA_SERVICE_NOT_CONFIGURED');
-  const routes:Record<string,string>={'sara.health':'/health','sara.cycle':'/v1/cycle','sara.audit':'/v1/audit','sara.regenerate':'/v1/regenerate','sara.state':'/v1/state','sara.capabilities':'/v1/capabilities','sara.trace': typeof (payload as {cycle_id?:unknown})?.cycle_id==='string' ? '/v1/trace/'+encodeURIComponent((payload as {cycle_id:string}).cycle_id) : ''};
+  const routes:Record<string,string>={'sara.health':'/health','sara.cycle':'/v1/cycle','sara.audit':'/v1/audit','sara.regenerate':'/v1/regenerate','sara.hortacore.assess':'/v1/hortacore/assess','sara.state':'/v1/state','sara.capabilities':'/v1/capabilities','sara.trace': typeof (payload as {cycle_id?:unknown})?.cycle_id==='string' ? '/v1/trace/'+encodeURIComponent((payload as {cycle_id:string}).cycle_id) : ''};
   const route=routes[capability];if(!route)throw new Error('SARA_CAPABILITY_NOT_SUPPORTED');
   const isGet=capability==='sara.health'||capability==='sara.state'||capability==='sara.capabilities'||capability==='sara.trace';
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Number(process.env.SARA_REQUEST_TIMEOUT_MS||30000));
@@ -58,7 +64,18 @@ async function callSara(capability:string,payload:unknown,correlationId:string):
   }finally{clearTimeout(timer);}
 }
 
-function meshAuthorized(req:any, message:any):boolean{const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();if(secret)return verifySoulMeshHmac(message,secret);return process.env.NODE_ENV!=='production';}
+function meshAuthorized(req:any, message:any):boolean{
+  const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if(secret){
+    const nonce=String(req.headers['x-soul-mesh-nonce']??'').trim();
+    const supplied=String(req.headers['x-soul-mesh-hmac']??'').trim();
+    if(!nonce||!supplied)return false;
+    return verifySoulMeshHmac({...message,nonce,hmac:supplied},secret);
+  }
+  const token=process.env.SOUL_MESH_TOKEN?.trim();
+  if(!token)return process.env.NODE_ENV!=='production';
+  return req.headers.authorization === `Bearer ${token}`;
+}
 
 router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
 router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
