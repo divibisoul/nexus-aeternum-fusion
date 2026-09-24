@@ -17,7 +17,7 @@ function canonical(message: SoulMeshMessage, nonceValue: string): string {
   return JSON.stringify({
     protocol: message.protocol, contractVersion: message.contractVersion, id: message.id, correlationId: message.correlationId,
     source: message.source, target: message.target, kind: message.kind, capability: message.capability ?? null,
-    payload: message.payload, timestamp: message.timestamp, transport: message.transport ?? null, meta: message.meta ?? null, nonce: nonceValue,
+    payload: message.payload, timestamp: message.timestamp, transport: message.meta?.transport ?? null, meta: message.meta ?? null, nonce: nonceValue,
   });
 }
 
