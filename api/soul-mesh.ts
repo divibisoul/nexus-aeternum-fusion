@@ -20,6 +20,28 @@ const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe'
 function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function saraPayload(capability: string, payload: unknown, correlationId: string): unknown {
+  if (!['sara.cycle', 'sara.audit', 'sara.regenerate'].includes(capability)) return payload;
+  if (!isRecord(payload)) throw new Error('SARA_PAYLOAD_MUST_BE_OBJECT');
+  const out: Record<string, unknown> = { ...payload };
+  if (capability === 'sara.cycle') {
+    if (typeof out.input !== 'string' || !out.input.trim()) throw new Error('SARA_INPUT_REQUIRED');
+    if (typeof out.cycle_id !== 'string' || !out.cycle_id.trim()) out.cycle_id = correlationId;
+  } else if (typeof out.input !== 'string' || !out.input.trim()) {
+    throw new Error('SARA_INPUT_REQUIRED');
+  }
+  if (isRecord(out.context)) {
+    out.context = { ...out.context, client: out.context.client ?? 'n03' };
+  } else if (out.context === undefined) {
+    out.context = { client: 'n03' };
+  }
+  return out;
+}
+
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
   if(!SARA_URL||(capability!=='sara.health'&&!SARA_TOKEN))throw new Error('SARA_SERVICE_NOT_CONFIGURED');
   const routes:Record<string,string>={'sara.health':'/health','sara.cycle':'/v1/cycle','sara.audit':'/v1/audit','sara.regenerate':'/v1/regenerate','sara.state':'/v1/state','sara.capabilities':'/v1/capabilities','sara.trace': typeof (payload as {cycle_id?:unknown})?.cycle_id==='string' ? '/v1/trace/'+encodeURIComponent((payload as {cycle_id:string}).cycle_id) : ''};
@@ -27,8 +49,12 @@ async function callSara(capability:string,payload:unknown,correlationId:string):
   const isGet=capability==='sara.health'||capability==='sara.state'||capability==='sara.capabilities'||capability==='sara.trace';
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Number(process.env.SARA_REQUEST_TIMEOUT_MS||30000));
   try{
-    const response=await fetch(SARA_URL+route,{method:isGet?'GET':'POST',headers:{accept:'application/json','content-type':'application/json',...(capability==='sara.health'?{}:{authorization:'Bearer '+SARA_TOKEN}),'x-correlation-id':correlationId},...(isGet?{}:{body:JSON.stringify({...((payload&&typeof payload==='object')?payload:{input:String(payload??'')}),...(capability==='sara.cycle'&&(!payload||typeof payload!=='object'||!('cycle_id' in payload))?{cycle_id:correlationId}:{})})}),signal:controller.signal,cache:'no-store'});
-    const body=await response.json().catch(()=>null);if(!response.ok)throw new Error('SARA_HTTP_'+response.status);return body;
+    const response=await fetch(SARA_URL+route,{method:isGet?'GET':'POST',headers:{accept:'application/json','content-type':'application/json',...(capability==='sara.health'?{}:{authorization:'Bearer '+SARA_TOKEN}),'x-correlation-id':correlationId},...(isGet?{}:{body:JSON.stringify(saraPayload(capability,payload,correlationId))}),signal:controller.signal,cache:'no-store'});
+    const body=await response.json().catch(()=>null);if(!response.ok)throw new Error('SARA_HTTP_'+response.status);
+    const echoed = response.headers.get('X-Correlation-ID');
+    if(echoed && echoed !== correlationId)throw new Error('SARA_CORRELATION_ID_MISMATCH');
+    if(isRecord(body) && typeof body.correlation_id === 'string' && body.correlation_id !== correlationId)throw new Error('SARA_CORRELATION_ID_MISMATCH');
+    return body;
   }finally{clearTimeout(timer);}
 }
 
