@@ -49,7 +49,21 @@ router.register('audio.transcribe', async m => { const a=audioInput(m.payload); 
 router.register('audio.analyze.emotion', async m => { const a=audioInput(m.payload); return {analysis:await analyzeEmotion(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
 router.register('mesh.ping', m => ({ok:true,handler:'N03.mesh.ping',echoed:m.payload,processedAt:Date.now()}));
-router.register('mesh.describe', () => ({nucleus:NUCLEUS_ID,peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents(),status:'online',contractVersion:SOUL_MESH_CONTRACT_VERSION}));
+router.register('mesh.describe', () => {
+  const agents = router.listAgents();
+  const executableCapabilities = [...new Set(agents.flatMap(agent => agent.capabilities))];
+  return {
+    nucleus: NUCLEUS_ID,
+    peers: [...PEERS],
+    ...channels,
+    declaredCapabilities: declaredCapabilities(),
+    executableCapabilities,
+    capabilities: declaredCapabilities(),
+    agents,
+    status: 'online',
+    contractVersion: SOUL_MESH_CONTRACT_VERSION,
+  };
+});
 router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_AUDIO_CAPABILITIES,agents:router.listAgents(),contractVersion:SOUL_MESH_CONTRACT_VERSION}));
 
 startN03PeerRegistration();
