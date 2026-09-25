@@ -32,7 +32,17 @@ async function callSara(capability:string,payload:unknown,correlationId:string):
   }finally{clearTimeout(timer);}
 }
 
-function meshAuthorized(req:any, message:any):boolean{const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();if(secret)return verifySoulMeshHmac(message,secret);return process.env.NODE_ENV!=='production';}
+function meshAuthorized(req:any, message:any):boolean{
+  const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if(secret && verifySoulMeshHmac(message,secret)) return true;
+  const token=process.env.SOUL_MESH_TOKEN?.trim();
+  const authorization=typeof req.headers?.authorization==='string' ? req.headers.authorization.trim() : '';
+  if(token && /^Bearer\\s+/i.test(authorization)){
+    const provided=authorization.replace(/^Bearer\\s+/i,'').trim();
+    return provided.length===token.length && crypto.timingSafeEqual(Buffer.from(provided),Buffer.from(token));
+  }
+  return !secret && !token && process.env.NODE_ENV!=='production';
+}
 
 router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
 router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
