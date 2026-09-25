@@ -70,16 +70,12 @@ function canonicalLegacy(message: WireMessage, nonceValue: string): string {
   });
 }
 
-function signaturesFor(message: WireMessage, nonceValue: string): string[] {
-  const signatures = new Set<string>();
-  for (const canonical of [
+function signaturesFor(message: WireMessage, secret: string, nonceValue: string): string[] {
+  return [
     canonicalModernWithMeta(message, nonceValue),
     canonicalModernTopLevel(message, nonceValue),
     canonicalLegacy(message, nonceValue),
-  ]) {
-    signatures.add(createHmac('sha256', nonceValue.length ? (process.env.SOUL_MESH_HMAC_SECRET ?? '') : '').update(canonical).digest('hex'));
-  }
-  return [...signatures];
+  ].map((value) => createHmac('sha256', secret).update(value).digest('hex'));
 }
 
 export function signSoulMeshMessage(message: SoulMeshMessage, secret: string): SoulMeshMessage & { nonce: string; hmac: string } {
@@ -101,11 +97,7 @@ export function verifySoulMeshHmac(message: SoulMeshMessage, secret: string, now
   const previous = usedNonces.get(key);
   if (previous !== undefined && now - previous <= MAX_CLOCK_SKEW_MS) return false;
 
-  const candidates = [
-    createHmac('sha256', secret).update(canonicalModernWithMeta(wire, nonce)).digest('hex'),
-    createHmac('sha256', secret).update(canonicalModernTopLevel(wire, nonce)).digest('hex'),
-    createHmac('sha256', secret).update(canonicalLegacy(wire, nonce)).digest('hex'),
-  ];
+  const candidates = signaturesFor(wire, secret, nonce);
   const suppliedBuffer = Buffer.from(supplied, 'hex');
   const valid = candidates.some((expected) => {
     const expectedBuffer = Buffer.from(expected, 'hex');
