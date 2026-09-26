@@ -4,6 +4,7 @@ import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
+import { forwardClareiraToN01, clareiraMetrics } from '../src/mesh/ClareiraBridge';
 
 const NUCLEUS_ID = 'N03' as const;
 const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07']);
@@ -75,6 +76,8 @@ export default async function handler(req:any,res:any){
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
   if(!validateMessage(m) || !NUCLEI.has(m.source) || m.target!==NUCLEUS_ID) return res.status(400).json({error:'INVALID_SOUL_MESH_MESSAGE'});
   if(!meshAuthorized(req,m)) return res.status(401).json({error:'UNAUTHORIZED'});
+  if(m.capability==='clareira.ingest'){try{return response(res,m,m.capability,await forwardClareiraToN01((m.payload as any)?.packet));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'CLAREIRA_FORWARD_FAILED'},502);}}
+  if(m.capability==='clareira.metrics') return response(res,m,m.capability,clareiraMetrics());
   if(m.capability?.startsWith('sara.')){try{return response(res,m,m.capability,await callSara(m.capability,m.payload,m.correlationId));}catch(error:any){return response(res,m,m.capability,{code:error?.message||'SARA_REQUEST_FAILED'},502);}}
   if(m.kind!=='request') return response(res,m,m.capability,{accepted:true});
   if(!acceptOnce(m.id)) return response(res,m,m.capability,{code:'REPLAY_DETECTED'},409);
