@@ -53,33 +53,38 @@ const unique = (values: readonly string[]) => [...new Set(values)];
  * it requires an explicit producer→consumer contract between the two surfaces.
  */
 export function calculatePairFusion(source: FusionCapability, target: FusionCapability): PairFusion {
+  const sourceDimensions = {
+    agents: source.agents,
+    tools: source.tools,
+    capabilities: source.capabilities,
+    context: source.context ?? [],
+    execution: source.execution ?? [],
+  };
+  const targetDimensions = {
+    agents: target.agents,
+    tools: target.tools,
+    capabilities: target.capabilities,
+    context: target.context ?? [],
+    execution: target.execution ?? [],
+  };
+
+  // Identity is dimension-scoped: an agent named "shared" is not the same
+  // contract as a tool named "shared". Cross-dimension collisions therefore
+  // cannot be counted as overlap.
   const shared = unique([
-    ...overlap(source.agents, target.agents),
-    ...overlap(source.tools, target.tools),
-    ...overlap(source.capabilities, target.capabilities),
-    ...overlap(source.context ?? [], target.context ?? []),
-    ...overlap(source.execution ?? [], target.execution ?? []),
+    ...overlap(sourceDimensions.agents, targetDimensions.agents),
+    ...overlap(sourceDimensions.tools, targetDimensions.tools),
+    ...overlap(sourceDimensions.capabilities, targetDimensions.capabilities),
+    ...overlap(sourceDimensions.context, targetDimensions.context),
+    ...overlap(sourceDimensions.execution, targetDimensions.execution),
   ]);
 
-  const sourceValues = [
-    ...source.agents,
-    ...source.tools,
-    ...source.capabilities,
-    ...(source.context ?? []),
-    ...(source.execution ?? []),
-  ];
-  const targetValues = [
-    ...target.agents,
-    ...target.tools,
-    ...target.capabilities,
-    ...(target.context ?? []),
-    ...(target.execution ?? []),
-  ];
-
-  const sourceSet = new Set(sourceValues);
-  const targetSet = new Set(targetValues);
-  const complementary = sourceValues.filter((x) => !targetSet.has(x));
-  const targetComplementary = targetValues.filter((x) => !sourceSet.has(x));
+  const complementary: string[] = [];
+  const targetComplementary: string[] = [];
+  for (const dimension of Object.keys(sourceDimensions) as Array<keyof typeof sourceDimensions>) {
+    complementary.push(...sourceDimensions[dimension].filter((value) => !targetDimensions[dimension].includes(value)));
+    targetComplementary.push(...targetDimensions[dimension].filter((value) => !sourceDimensions[dimension].includes(value)));
+  }
   const emergent = unique([...complementary, ...targetComplementary]);
 
   const validatedEmergent = unique([
