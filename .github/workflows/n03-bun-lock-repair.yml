@@ -1,6 +1,7 @@
 name: N03 Bun Lock Repair
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - fix/n03-bun-lock-sync-2026-09-27
