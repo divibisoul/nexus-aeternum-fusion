@@ -1,0 +1,37 @@
+name: N03 Bun Lock Repair
+
+on:
+  push:
+    branches:
+      - fix/n03-bun-lock-sync-2026-09-27
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Regenerate canonical Bun lockfile
+        run: bun install
+      - name: Verify frozen lockfile
+        run: bun install --frozen-lockfile
+      - name: Persist Bun lockfile
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- bun.lockb; then
+            echo "bun.lockb already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lockb
+          git commit -m "fix(N03): synchronize Bun lockfile"
+          git push origin HEAD:${GITHUB_REF_NAME}
