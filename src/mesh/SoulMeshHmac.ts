@@ -85,6 +85,29 @@ export function signSoulMeshMessage(message: SoulMeshMessage, secret: string): S
   return { ...signed, hmac: createHmac('sha256', secret).update(canonical).digest('hex') };
 }
 
+export function signSoulMeshLegacyResponse(
+  request: SoulMeshMessage,
+  payload: unknown,
+  kind: 'response' | 'error',
+  secret: string,
+): SoulMeshMessage & { nonce: string; hmac: string } {
+  if (!secret) throw new Error('SOUL_MESH_HMAC_SECRET_REQUIRED');
+  const message: WireMessage = {
+    ...request,
+    id: crypto.randomUUID(),
+    source: request.target,
+    target: request.source,
+    kind,
+    payload,
+    timestamp: Date.now(),
+  };
+  const nonceValue = crypto.randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
+  const hmac = createHmac('sha256', secret)
+    .update(canonicalLegacy(message, nonceValue), 'utf8')
+    .digest('hex');
+  return { ...message, nonce: nonceValue, hmac };
+}
+
 export function verifySoulMeshHmac(message: SoulMeshMessage, secret: string, now = Date.now()): boolean {
   const wire = message as WireMessage;
   if (!secret) return false;
