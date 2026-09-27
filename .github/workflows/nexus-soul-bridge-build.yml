@@ -3,46 +3,36 @@ name: Nexus Soul Bridge Build
 on:
   workflow_dispatch:
   push:
+    branches: [main, 'feat/**']
     paths:
-      - 'src/core/**'
-      - 'src/integration/**'
-      - 'src/soul-mesh/**'
-      - 'src/components/NexusInput.tsx'
-      - 'src/main.tsx'
+      - 'src/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/nexus-soul-bridge-build.yml'
+  pull_request:
+    branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: nexus-soul-bridge-main
-  cancel-in-progress: false
+  group: nexus-soul-bridge-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Sync npm lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Commit synchronized lockfile
-        run: |
-          if git diff --quiet -- package-lock.json; then exit 0; fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package-lock.json
-          git commit -m "chore(N03): synchronize npm lockfile [skip ci]"
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
-      - run: npm ci
-      - run: npm run build
-      - run: test -s dist/index.html
+      - name: Verify lockfile is synchronized
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Verify build artifact
+        run: test -s dist/index.html
