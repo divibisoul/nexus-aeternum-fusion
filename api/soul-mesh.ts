@@ -3,7 +3,7 @@ import { N03_AUDIO_CAPABILITIES } from '../src/mesh/N03AudioCapabilityRegistry';
 import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
-import { verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
+import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
 
 const NUCLEUS_ID = 'N03' as const;
 const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07']);
@@ -17,7 +17,26 @@ const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
 const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
-function response(res:any, m:any, capability:string, payload:unknown, status=200){ return res.status(status).json({ protocol:'soul-mesh/1', contractVersion:SOUL_MESH_CONTRACT_VERSION, id:crypto.randomUUID(), correlationId:m?.correlationId||crypto.randomUUID(), source:NUCLEUS_ID, target:m?.source||NUCLEUS_ID, kind:status>=400?'error':'response', capability, payload, timestamp:Date.now() }); }
+function response(res:any, m:any, capability:string, payload:unknown, status=200){
+  const base:any={
+    protocol:'soul-mesh/1',
+    contractVersion:SOUL_MESH_CONTRACT_VERSION,
+    id:crypto.randomUUID(),
+    correlationId:m?.correlationId||crypto.randomUUID(),
+    source:NUCLEUS_ID,
+    target:m?.source||NUCLEUS_ID,
+    kind:status>=400?'error':'response',
+    capability,
+    payload,
+    timestamp:Date.now(),
+  };
+  const secret=process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if(secret && m){
+    const signed=signSoulMeshLegacyResponse(m, payload, base.kind, secret);
+    return res.status(status).json({...signed, meta:{...signed.meta, nonce:signed.nonce}});
+  }
+  return res.status(status).json(base);
+}
 function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
