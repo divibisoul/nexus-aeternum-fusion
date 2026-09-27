@@ -1,0 +1,41 @@
+name: N03 Dependency Lock Repair Push
+
+on:
+  push:
+    branches:
+      - feat/soul-n03-n07-live
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Regenerate package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Apply compatible security fixes
+        run: npm audit fix --package-lock-only --ignore-scripts --no-fund || true
+      - name: Verify high severity audit
+        run: npm audit --audit-level=high
+      - name: Persist lockfile
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo 'Lockfile already synchronized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git commit -m 'fix: synchronize N03 audited npm lockfile'
+          git push origin HEAD:${{ github.ref_name }}
