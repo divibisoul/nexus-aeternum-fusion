@@ -1,0 +1,42 @@
+name: N03 lock repair
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/soul-n03-n07-live
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: n03-lock-repair
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/soul-n03-n07-live
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Persist lockfile on branch
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already synchronized"
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add package-lock.json
+          git commit -m "fix(n03): synchronize package lockfile"
+          git push origin HEAD:feat/soul-n03-n07-live
