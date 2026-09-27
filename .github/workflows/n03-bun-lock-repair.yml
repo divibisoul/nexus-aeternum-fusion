@@ -20,13 +20,21 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Sync with remote branch
+        run: |
+          set -euo pipefail
+          git fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
       - name: Regenerate canonical Bun lockfile
-        run: bun install
+        run: |
+          bun install
+          chmod 0644 bun.lockb
       - name: Verify frozen lockfile
         run: bun install --frozen-lockfile
       - name: Persist Bun lockfile
         run: |
           set -euo pipefail
+          chmod 0644 bun.lockb
           if git diff --quiet -- bun.lockb; then
             echo "bun.lockb already synchronized"
             exit 0
