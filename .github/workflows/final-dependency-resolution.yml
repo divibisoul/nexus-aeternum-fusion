@@ -21,6 +21,19 @@ jobs:
           node-version: 22
       - name: Synchronize package lockfile
         run: npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - name: Persist synchronized package lockfile
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "fix(n03): synchronize npm dependency lockfile"
+          git push origin HEAD:\${GITHUB_HEAD_REF}
+
       - name: Apply compatible audit fixes
         run: npm audit fix --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Verify security gate
