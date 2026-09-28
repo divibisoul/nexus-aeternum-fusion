@@ -15,7 +15,7 @@ const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
 const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','octacore.execute','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
 function response(res:any, m:any, capability:string, payload:unknown, status=200){
   const base:any={
@@ -69,6 +69,7 @@ router.register('octacore.execute', async (m: any) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('OCTACORE_N03_PAYLOAD_MUST_BE_OBJECT');
   const capability = typeof value.capability === 'string' ? value.capability.trim() : '';
   if (!capability) throw new Error('OCTACORE_N03_CAPABILITY_REQUIRED');
+  if (capability === 'octacore.execute') throw new Error('OCTACORE_N03_RECURSION_FORBIDDEN');
   const nested = { ...m, capability, payload: value.payload };
   const result = await router.dispatch(nested);
   return {
