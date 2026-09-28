@@ -19,12 +19,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Capture dependency toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            date -u
+            node --version
+            npm --version
+            git --version
+            npm config get registry
+          } 2>&1 | tee "$RUNNER_TEMP/n03-dependency-toolchain.log"
       - name: Synchronize package lockfile
-        run: npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund 2>&1 | tee "$RUNNER_TEMP/n03-dependency-install.log"
       - name: Apply compatible audit fixes
-        run: npm audit fix --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit fix --package-lock-only --legacy-peer-deps --ignore-scripts --no-audit --no-fund 2>&1 | tee "$RUNNER_TEMP/n03-dependency-audit-fix.log"
       - name: Verify security gate
-        run: npm audit --audit-level=high
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --audit-level=high 2>&1 | tee "$RUNNER_TEMP/n03-dependency-audit.log"
       - name: Persist repaired lockfile
         run: |
           if git diff --quiet -- package-lock.json; then
@@ -36,3 +56,11 @@ jobs:
           git add package-lock.json
           git commit -m "fix(n03): persist audited dependency lockfile"
           git push origin HEAD:${GITHUB_HEAD_REF}
+      - name: Upload dependency diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n03-dependency-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/n03-dependency-*.log
+          if-no-files-found: warn
+          retention-days: 14
