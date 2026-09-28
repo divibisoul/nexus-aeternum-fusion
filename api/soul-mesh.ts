@@ -64,6 +64,24 @@ function meshAuthorized(req:any, message:any):boolean{
 }
 
 router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
+router.register('octacore.execute', async (m: any) => {
+  const value = m.payload;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('OCTACORE_N03_PAYLOAD_MUST_BE_OBJECT');
+  const capability = typeof value.capability === 'string' ? value.capability.trim() : '';
+  if (!capability) throw new Error('OCTACORE_N03_CAPABILITY_REQUIRED');
+  const nested = { ...m, capability, payload: value.payload };
+  const result = await router.dispatch(nested);
+  return {
+    ok: true,
+    kernel: 'G3',
+    nucleus: NUCLEUS_ID,
+    capability,
+    job_id: typeof value.job_id === 'string' ? value.job_id : undefined,
+    correlation_id: m.correlationId,
+    value: result,
+  };
+});
+
 router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
 router.register('audio.analyze.emotion', async m => { const a=audioInput(m.payload); return {analysis:await analyzeEmotion(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
