@@ -46,17 +46,19 @@ export class N03SynergyOrchestrator {
   }
 
   perceptionToReasoning(input: unknown) {
-    return this.execute([{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }]);
+    return this.execute([{ target: 'N05', capability: 'inference.reason', payload: { perception: input } }]);
   }
 
-  perceptionToExecution(input: unknown) {
-    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: { perception: input } }]);
+  perceptionToExecution(input: unknown, toolPayload?: unknown) {
+    if (toolPayload === undefined) throw new Error('N03_EXECUTABLE_TOOL_PAYLOAD_REQUIRED');
+    return this.execute([{ target: 'N04', capability: 'tool.execute', payload: toolPayload }]);
   }
 
-  perceptionReasoningExecution(input: unknown) {
+  perceptionReasoningExecution(input: unknown, toolPayload?: unknown) {
+    if (toolPayload === undefined) throw new Error('N03_EXECUTABLE_TOOL_PAYLOAD_REQUIRED');
     return this.execute([
-      { target: 'N02', capability: 'inference.reason', payload: { perception: input } },
-      { target: 'N04', capability: 'tool.execute', payload: { instruction: 'Execute the useful action derived from the reasoning result.' } },
+      { target: 'N05', capability: 'inference.reason', payload: { perception: input } },
+      { target: 'N04', capability: 'tool.execute', payload: toolPayload },
     ]);
   }
 
