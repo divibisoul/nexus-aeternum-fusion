@@ -17,8 +17,8 @@ describe('NexusCoreProcessor executable capability boundary', () => {
     const processor = new NexusCoreProcessor();
 
     expect(() =>
-      processor.registerHandler('voice-input' as never, async () => null),
-    ).not.toThrow();
+      processor.registerHandler('not-declared' as never, async () => null),
+    ).toThrow(/undeclared Nexus capability/);
   });
 
   it('keeps only explicitly bound handlers executable', () => {
