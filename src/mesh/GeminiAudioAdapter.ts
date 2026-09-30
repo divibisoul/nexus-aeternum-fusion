@@ -186,7 +186,7 @@ export async function synthesizeSpeech(text: string, voice = 'Kore'): Promise<{ 
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: voice.trim() || 'Kore' },
+            voice: voice.trim() || 'Kore',
           },
         },
       },
