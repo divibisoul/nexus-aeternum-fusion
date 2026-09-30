@@ -53,6 +53,7 @@ export class SoulMeshPeerClient {
     target: Exclude<SoulNucleus, 'N03'>,
     capability: string,
     payload: unknown,
+    correlationId?: string,
   ): Promise<SoulMeshMessage> {
     const endpoint = this.endpointFor(target);
     if (!endpoint) {
@@ -63,21 +64,21 @@ export class SoulMeshPeerClient {
     }
 
     const nonceValue = nonce();
-    const correlationId = randomUUID();
+    const resolvedCorrelationId = typeof correlationId === 'string' && correlationId.trim() ? correlationId.trim() : randomUUID();
     const message = createSoulMeshMessage({
       source: this.source,
       target,
       kind: 'request',
       capability,
       payload,
-      correlationId,
+      correlationId: resolvedCorrelationId,
       meta: {
         runtime: 'nexus-aeternum-fusion',
         transport: 'HTTP',
         encoding: 'json',
         version: '1.1.0',
         nonce: nonceValue,
-        traceId: correlationId,
+        traceId: resolvedCorrelationId,
       },
     });
     validateSoulMeshMessage(message);
