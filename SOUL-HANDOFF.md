@@ -1,8 +1,8 @@
 # SOUL Handoff — N03
 **Date:** 2026-09-30
-**Main head:** d0daf11a7f090ba7708c387eb0c697a1260cf1ee
+**Main state:** neural-parameters federation rescue PR #27 merged at **dd629ebcef21595a165cab46dc919328950350ad**.
 **Role:** audio perception/speech runtime and N03 Mesh transport.
-**Recent work:** Gemini audio capability manifest, learning feedback bridge, metadata transport and Mesh CI trigger correction.
-**Native capability boundary:** transcribe/synthesize are declared; emotion/translation/summarize/continuous/denoise/speaker-ID remain pending until real adapters exist.
-**Dependency now unblocked at source level:** N07 learning.feedback is present on MAIN after merged PR #75.
-**Next task:** exercise one real N03→N07 feedback transaction and record its correlation/provenance; do not promote pending audio adapters without real implementation evidence.
+**Activated:** N03→N07 neural bridge now exposes neural.forward, neural.learn, neural.parameters and learning.feedback while preserving HMAC/correlation/timeout semantics.
+**Historical front:** remaining open/old PRs must be compared against current MAIN; do not restore older transport files that duplicate the current bridge.
+**Evidence state:** source-level implementation verified from current MAIN. Live bidirectional commissioning is still UNVERIFIED.
+**Next bounded cycle:** inspect the next unique N03 audio/perception residue only; promote a capability only when its real adapter exists and its executable state is evidenced.
