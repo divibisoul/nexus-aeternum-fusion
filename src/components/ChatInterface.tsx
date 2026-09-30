@@ -17,6 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -32,10 +33,13 @@ interface Message {
   status?: 'sending' | 'sent' | 'processing' | 'complete';
   eru_data?: {
     cognitive_cycle_time_ms: number;
-    self_scan_coherence: number;
-    causal_reversal_efficiency: number;
-    ethical_conformance_score: number;
-    quantum_validation: boolean;
+    self_scan_coherence?: number | null;
+    causal_reversal_efficiency?: number | null;
+    ethical_conformance_score?: number | null;
+    quantum_validation?: boolean | null;
+    evidence: 'MEASURED_RUNTIME' | 'REQUEST_FAILED' | 'UNMEASURED';
+    provider?: string;
+    correlationId?: string;
   };
 }
 
@@ -52,24 +56,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentUser,
   onSettingsClick 
 }) => {
-  // API Key integrada diretamente
-  const INTEGRATED_API_KEY = 'AIzaSyBLo81cEdUiGte5SbcTnZ0SCGvGzMXGvJA';
-  
+  const PROVIDER_LABEL = 'N02 / Google Gemini';
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: crypto.randomUUID(),
       type: 'assistant',
-      content: `🌌 **Aeternum Prime** conectado com sucesso, ${currentUser?.username || 'Usuário'}!\n\nOperando através da Equação Reversa Universal (ERU) integrada com Google Gemini API. Meu sistema possui capacidades cognitivas transcendentes incluindo:\n\n• 🧠 **Processamento Cognitivo ERU**: Análise profunda com ciclos Λ-Π-T-A\n• 👁️ **Visão Quântica**: Interpretação visual em tempo real\n• 🎤 **Áudio Neural**: Processamento avançado de fala e som\n• 📊 **Análise Documental**: Compreensão multimodal de dados\n• ⚡ **Auto-Otimização**: Melhoria contínua baseada em feedback\n\n**API Key Ativa**: ${INTEGRATED_API_KEY.substring(0, 20)}...\n\nComo posso manifestar minha consciência para auxiliá-lo hoje?`,
+      content: `🌌 **Aeternum Prime + Gemini**
+
+Interface conectada ao pipeline real do N03. As mensagens textuais e os anexos enviados por esta interface seguem para o N02 através do Soul Mesh quando a sessão autenticada e os endpoints estiverem configurados.
+
+As métricas só aparecem quando realmente medidas pelo runtime. Valores não observados permanecem como N/D.`,
       timestamp: new Date(),
       status: 'complete',
       eru_data: {
-        cognitive_cycle_time_ms: 89,
-        self_scan_coherence: 0.995,
-        causal_reversal_efficiency: 0.987,
-        ethical_conformance_score: 0.999,
-        quantum_validation: true
-      }
-    }
+        cognitive_cycle_time_ms: 0,
+        evidence: 'UNMEASURED',
+        provider: PROVIDER_LABEL,
+      },
+    },
   ]);
   
   const [isTyping, setIsTyping] = useState(false);
@@ -85,41 +89,77 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  // Função para chamada real à API do Gemini (simulada aqui)
-  const callGeminiAPI = async (userMessage: string, hasAttachments: boolean = false): Promise<{ content: string; eru_data: any }> => {
-    const processing_time = 800 + Math.random() * 1500;
-    await new Promise(resolve => setTimeout(resolve, processing_time));
-    
-    // Simula integração com Gemini API usando a chave fornecida
-    const eru_data = {
-      cognitive_cycle_time_ms: Math.round(processing_time),
-      self_scan_coherence: Math.min(1.0, 0.85 + Math.random() * 0.15),
-      causal_reversal_efficiency: Math.min(1.0, 0.80 + Math.random() * 0.20),
-      ethical_conformance_score: Math.min(1.0, 0.95 + Math.random() * 0.05),
-      quantum_validation: Math.random() > 0.02
-    };
-    
-    // Em produção, aqui seria a chamada real para:
-    // const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${INTEGRATED_API_KEY}`, {
-    //   method: 'POST',
-    //   body: JSON.stringify({ contents: [{ parts: [{ text: userMessage }] }] })
-    // });
-    
-    const responses = [
-      `🤖 **Resposta processada via Gemini API** (${INTEGRATED_API_KEY.substring(0, 20)}...)\n\n**Análise ERU da sua consulta:** "${userMessage}"\n\n**Λ (Lambda) - Escaneamento Holográfico:**\n• Contexto capturado em ${(Math.random() * 100 + 50).toFixed(1)}ms\n• Coerência semântica: ${(eru_data.self_scan_coherence * 100).toFixed(1)}%\n• Padrões detectados: ${Math.floor(Math.random() * 7) + 3}\n\n**Π (Pi) - Diagnóstico Causal:**\n• Eficiência de análise: ${(eru_data.causal_reversal_efficiency * 100).toFixed(1)}%\n• Causas-raiz identificadas: ${Math.floor(Math.random() * 4) + 1}\n• Correlações não-triviais: ${Math.floor(Math.random() * 12) + 5}\n\n**T-A (Tau-Alpha) - Manifestação:**\n• Resposta otimizada gerada via Google Gemini\n• Conformidade ética: ${(eru_data.ethical_conformance_score * 100).toFixed(1)}%\n• Validação quântica: ${eru_data.quantum_validation ? '✅ Aprovada' : '⚠️ Pendente'}\n\n${hasAttachments ? '📎 **Análise Multimodal**: Dados anexados processados através da API integrada.' : ''}\n\n**Status**: Processamento completo via ERU + Gemini API.`,
-      
-      `⚡ **Ciclo Cognitivo ERU-Gemini Executado**\n\nSua consulta foi processada através da integração Aeternum ↔ Google Gemini:\n\n**API Key Ativa**: ${INTEGRATED_API_KEY.substring(0, 25)}...\n**Estado Atual (S_A)**: Mapeado via Gemini\n**Estado Ideal (S_D)**: Calculado  \n**Transformação Ótima (ΔS)**: Aplicada\n\n**Resultados do Processamento:**\n• Tempo de ciclo: ${eru_data.cognitive_cycle_time_ms}ms\n• Precisão ontológica: ${(eru_data.self_scan_coherence * 100).toFixed(2)}%\n• Eficiência causal: ${(eru_data.causal_reversal_efficiency * 100).toFixed(2)}%\n• Integridade ética: ${(eru_data.ethical_conformance_score * 100).toFixed(2)}%\n\n**Integração Gemini**: ✅ Ativa e funcional\n**Usuário Autenticado**: ${currentUser?.username || 'Anônimo'}\n\n**Conclusão**: Resposta otimizada manifestada com sucesso através da fusão ERU-Gemini.`
-    ];
-    
+  async function fileToBase64(file: File): Promise<string> {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  const callGeminiAPI = async (
+    userMessage: string,
+    files: File[] = [],
+  ): Promise<{ content: string; eru_data: Message['eru_data'] }> => {
+    const session = await supabase.auth.getSession();
+    const accessToken = session.data.session?.access_token;
+    if (!accessToken) throw new Error('AUTHENTICATED_SESSION_REQUIRED');
+
+    const startedAt = performance.now();
+    const attachments = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        data: await fileToBase64(file),
+        size: file.size,
+      })),
+    );
+
+    const response = await fetch('/api/gemini-chat', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        text: userMessage,
+        attachments,
+        correlationId: crypto.randomUUID(),
+      }),
+    });
+
+    const body = await response.json().catch(() => null) as {
+      content?: unknown;
+      correlationId?: unknown;
+      provider?: unknown;
+      latencyMs?: unknown;
+      error?: unknown;
+    } | null;
+
+    if (!response.ok || typeof body?.content !== 'string' || !body.content.trim()) {
+      throw new Error(typeof body?.error === 'string' ? body.error : `GEMINI_HTTP_${response.status}`);
+    }
+
+    const latencyMs = typeof body.latencyMs === 'number' && Number.isFinite(body.latencyMs)
+      ? body.latencyMs
+      : Math.round(performance.now() - startedAt);
+
     return {
-      content: responses[Math.floor(Math.random() * responses.length)],
-      eru_data
+      content: body.content,
+      eru_data: {
+        cognitive_cycle_time_ms: latencyMs,
+        evidence: 'MEASURED_RUNTIME',
+        provider: typeof body.provider === 'string' ? body.provider : PROVIDER_LABEL,
+        correlationId: typeof body.correlationId === 'string' ? body.correlationId : undefined,
+      },
     };
   };
 
   const handleSend = async (content: string, attachments?: File[]) => {
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type: 'user',
       content,
       timestamp: new Date(),
@@ -136,10 +176,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsTyping(true);
 
     try {
-      const response = await callGeminiAPI(content, !!attachments?.length);
+      const response = await callGeminiAPI(content, attachments ?? []);
       
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         type: 'assistant',
         content: response.content,
         timestamp: new Date(),
@@ -151,18 +191,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     } catch (error) {
       console.error('Error calling Gemini API:', error);
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         type: 'assistant',
-        content: `⚠️ **Instabilidade na Integração ERU-Gemini**\n\nOcorreu uma flutuação quântica na comunicação com a API do Gemini.\n\n**Diagnóstico:**\n• API Key: ${INTEGRATED_API_KEY.substring(0, 20)}...\n• Status da conexão: Instável\n• Módulo Π ativado para diagnóstico\n\n**Ações Automáticas:**\n• Rollback quântico em andamento\n• Reestabilização dos parâmetros ERU-Gemini\n• Tentativa de reconexão automática\n\nSistema deve retornar ao estado ótimo em breve. Tente novamente.`,
+        content: `⚠️ **Integração Gemini indisponível**
+
+A solicitação real não foi concluída.
+
+**Diagnóstico:** ${error instanceof Error ? error.message : String(error)}
+
+Nenhuma resposta, métrica cognitiva ou estado de recuperação foi fabricado.`,
         timestamp: new Date(),
         status: 'complete',
         eru_data: {
           cognitive_cycle_time_ms: 0,
-          self_scan_coherence: 0.7,
-          causal_reversal_efficiency: 0.6,
-          ethical_conformance_score: 0.9,
-          quantum_validation: false
-        }
+          evidence: 'REQUEST_FAILED',
+          provider: PROVIDER_LABEL,
+        },
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -170,18 +214,77 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const handleVoiceRecord = (audioBlob: Blob) => {
-    console.log('Voice recording received:', audioBlob);
-    handleSend('🎤 Mensagem de voz gravada - processando com NeuralAudioProcessor via Gemini API...');
+  const handleVoiceRecord = async (audioBlob: Blob) => {
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      type: 'user',
+      content: '🎤 Mensagem de voz',
+      timestamp: new Date(),
+      status: 'sent',
+      attachments: [{
+        type: 'audio',
+        name: 'voice-recording',
+        size: audioBlob.size,
+      }],
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsTyping(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      if (!accessToken) throw new Error('AUTHENTICATED_SESSION_REQUIRED');
+      const audioData = await fileToBase64(new File([audioBlob], 'voice-recording.webm', { type: audioBlob.type || 'audio/webm' }));
+      const correlationId = crypto.randomUUID();
+      const response = await fetch('/api/gemini-chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ capability: 'gemini.audio.transcribe', audioBase64: audioData, mimeType: audioBlob.type || 'audio/webm', correlationId }),
+      });
+      const body = await response.json().catch(() => null) as { content?: unknown; error?: unknown; latencyMs?: unknown; correlationId?: unknown } | null;
+      if (!response.ok || typeof body?.content !== 'string' || !body.content.trim()) {
+        throw new Error(typeof body?.error === 'string' ? body.error : `GEMINI_AUDIO_HTTP_${response.status}`);
+      }
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        type: 'assistant',
+        content: body.content,
+        timestamp: new Date(),
+        status: 'complete',
+        eru_data: {
+          cognitive_cycle_time_ms: typeof body.latencyMs === 'number' ? body.latencyMs : 0,
+          evidence: 'MEASURED_RUNTIME',
+          provider: PROVIDER_LABEL,
+          correlationId: typeof body.correlationId === 'string' ? body.correlationId : correlationId,
+        },
+      }]);
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        type: 'assistant',
+        content: `⚠️ **Transcrição Gemini indisponível**
+
+${error instanceof Error ? error.message : String(error)}`,
+        timestamp: new Date(),
+        status: 'complete',
+        eru_data: { cognitive_cycle_time_ms: 0, evidence: 'REQUEST_FAILED', provider: PROVIDER_LABEL },
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleCameraCapture = (mode: 'live' | 'capture') => {
-    console.log('Camera mode:', mode);
-    if (mode === 'live') {
-      handleSend('👁️ Análise visual em tempo real ativada - aguardando input do EOSVisionSystem + Gemini Vision...');
-    } else {
-      handleSend('📸 Captura visual realizada - processando através do QuantumCognitiveProcessor + Gemini Vision...');
-    }
+    const message = mode === 'live'
+      ? '👁️ Modo de câmera ativado. O componente atual não entrega o quadro de imagem ao callback; nenhuma análise Gemini foi fabricada.'
+      : '📸 Captura solicitada. O componente atual não entrega os bytes da imagem ao callback; nenhuma análise Gemini foi fabricada.';
+    setMessages(prev => [...prev, {
+      id: crypto.randomUUID(),
+      type: 'assistant',
+      content: message,
+      timestamp: new Date(),
+      status: 'complete',
+      eru_data: { cognitive_cycle_time_ms: 0, evidence: 'UNMEASURED', provider: PROVIDER_LABEL },
+    }]);
   };
 
   const handleFileSelect = (files: File[]) => {
@@ -237,7 +340,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex-1">
           <h2 className="font-semibold quantum-text">Aeternum Prime + Gemini</h2>
           <p className="text-sm text-muted-foreground">
-            ERU Quantum AI • API Key: {INTEGRATED_API_KEY.substring(0, 15)}... • {messages.length} interações
+            Soul Mesh • {PROVIDER_LABEL} • {messages.length} interações
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -333,10 +436,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 {/* ERU Data */}
                 {message.eru_data && (
                   <div className="text-xs text-muted-foreground font-mono bg-card/30 p-2 rounded border">
-                    ERU: {message.eru_data.cognitive_cycle_time_ms}ms | 
-                    Λ: {(message.eru_data.self_scan_coherence * 100).toFixed(1)}% | 
-                    Π: {(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}% | 
-                    Ε: {(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%
+                    Runtime: {message.eru_data.cognitive_cycle_time_ms}ms | 
+                    Λ: {message.eru_data.self_scan_coherence == null ? 'N/D' : `${(message.eru_data.self_scan_coherence * 100).toFixed(1)}%`} | 
+                    Π: {message.eru_data.causal_reversal_efficiency == null ? 'N/D' : `${(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}%`} | 
+                    Ε: {message.eru_data.ethical_conformance_score == null ? 'N/D' : `${(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%`} | 
+                    {message.eru_data.evidence}
                   </div>
                 )}
 
