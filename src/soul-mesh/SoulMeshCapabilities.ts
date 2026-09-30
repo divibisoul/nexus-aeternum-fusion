@@ -6,6 +6,12 @@ export type SoulMeshCapability = { id: string; version: string; description: str
  */
 export const SOUL_MESH_CAPABILITIES: SoulMeshCapability[] = [
   { id: 'cognitive-ui', version: '1.1', description: 'Cognitive interaction and UI services', request: true, response: true, events: true },
+  { id: 'audio.transcribe', version: '1.0', description: 'Canonical N03 Gemini audio transcription capability.', request: true, response: true, events: true },
+  { id: 'speech.synthesize', version: '1.0', description: 'Canonical N03 Gemini speech synthesis capability.', request: true, response: true, events: true },
+  { id: 'audio.analyze.emotion', version: '1.0', description: 'Canonical N03 Gemini audio emotion-analysis capability.', request: true, response: true, events: true },
+  { id: 'audio.summarize', version: '1.0', description: 'Canonical N03 Gemini audio summarization capability.', request: true, response: true, events: true },
+  { id: 'speech.translate', version: '1.0', description: 'Canonical N03 Gemini speech translation capability.', request: true, response: true, events: true },
+  { id: 'speaker.identify', version: '1.0', description: 'Canonical N03 speaker-turn diarization capability.', request: true, response: true, events: true },
   { id: 'voice-input', version: '1.0', description: 'Voice/audio input handling', request: true, response: true, events: true },
   { id: 'voice-output', version: '1.0', description: 'Voice output handling', request: true, response: true, events: true },
   { id: 'speech-processing', version: '1.0', description: 'Speech processing orchestration', request: true, response: true, events: true },
