@@ -7,6 +7,8 @@ on:
       - 'src/core/**'
       - 'src/integration/**'
       - 'src/soul-mesh/**'
+      - 'src/mesh/**'
+      - 'api/**'
       - 'src/components/NexusInput.tsx'
       - 'src/main.tsx'
       - 'package.json'
