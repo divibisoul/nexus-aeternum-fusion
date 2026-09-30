@@ -11,3 +11,5 @@ export const N03_AUDIO_CAPABILITIES:AudioCapability[]=[
 {id:'speaker.identify',status:'implemented',provider:'Gemini 3.5 Transcribe',description:'Speaker-turn diarization only; it does not claim personal identity.'},
 ];
 export function hasAudioCapability(id:string){return N03_AUDIO_CAPABILITIES.some(c=>c.id===id);}
+
+export function executableAudioCapabilities(){return N03_AUDIO_CAPABILITIES.filter(c=>c.status==='implemented');}
