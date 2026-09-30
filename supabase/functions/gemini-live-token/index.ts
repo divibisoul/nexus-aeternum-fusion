@@ -14,8 +14,34 @@ serve(async (req) => {
     });
   }
 
-  if (!req.headers.get("authorization")) {
-    return new Response(JSON.stringify({ error: "AUTHORIZATION_REQUIRED" }), {
+  const authorization = req.headers.get("authorization") ?? "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  const accessToken = match?.[1]?.trim() ?? "";
+  if (!accessToken) {
+    return new Response(JSON.stringify({ error: "VALID_BEARER_TOKEN_REQUIRED" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").trim();
+  const supabaseAnonKey = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(JSON.stringify({ error: "SUPABASE_AUTH_NOT_CONFIGURED" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!userResponse.ok) {
+    return new Response(JSON.stringify({ error: "SUPABASE_AUTH_INVALID" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
