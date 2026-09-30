@@ -18,8 +18,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
   const [error, setError] = useState('');
   const { toast } = useToast();
 
-  // API Key integrada diretamente no código
-  const INTEGRATED_API_KEY = 'AIzaSyDkNQodJM0gJJFSOEwzRFE1PJ9X71i1EdM';
+  // Autenticação Gemini administrada pelo backend
 
   useEffect(() => {
     // Verificar se já está logado
