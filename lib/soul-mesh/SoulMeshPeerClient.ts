@@ -130,6 +130,22 @@ export class SoulMeshPeerClient {
     return body;
   }
 
+  async superGPUExecute(values: number[], operation = 'identity', device?: string, correlationId = randomUUID()) {
+    if (!Array.isArray(values) || values.length === 0 || values.some(value => !Number.isFinite(value))) {
+      throw new Error('SUPERGPU_VALUES_INVALID');
+    }
+    const metadata: Record<string, unknown> = { operation };
+    if (device?.trim()) metadata.device = device.trim();
+    const response = await this.request('N07', 'supergpu.execute', { payload: { values }, metadata }, correlationId);
+    return { correlationId, payload: response.payload };
+  }
+
+  async superGPUParallel(tasks: SuperGPUTask[], correlationId = randomUUID()) {
+    if (!Array.isArray(tasks) || tasks.length === 0) throw new Error('SUPERGPU_TASKS_REQUIRED');
+    const response = await this.request('N07', 'supergpu.parallel', { payload: { tasks } }, correlationId);
+    return { correlationId, payload: response.payload };
+  }
+
   async ping(target: Exclude<SoulNucleus, 'N03'>) {
     return this.request(target, 'mesh.ping', {});
   }
@@ -151,3 +167,11 @@ export class SoulMeshPeerClient {
     );
   }
 }
+
+export type SuperGPUTask = {
+  id?: string;
+  capability: string;
+  payload: Record<string, unknown>;
+  required?: boolean;
+  timeout_ms?: number;
+};
