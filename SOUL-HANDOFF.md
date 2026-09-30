@@ -4,5 +4,5 @@
 **Role:** audio perception/speech runtime and N03 Mesh transport.
 **Recent work:** Gemini audio capability manifest, learning feedback bridge, metadata transport and Mesh CI trigger correction.
 **Native capability boundary:** transcribe/synthesize are declared; emotion/translation/summarize/continuous/denoise/speaker-ID remain pending until real adapters exist.
-**Known blocker:** N07 learning receiver is the current central dependency for emitted feedback.
-**Next task:** exercise one real N03→N07 learning feedback transaction when N07 contract is available; keep pending audio adapters explicitly pending.
+**Dependency now unblocked at source level:** N07 learning.feedback is present on MAIN after merged PR #75.
+**Next task:** exercise one real N03→N07 feedback transaction and record its correlation/provenance; do not promote pending audio adapters without real implementation evidence.
