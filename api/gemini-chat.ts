@@ -1,11 +1,14 @@
 import { N03N02CapabilityBridge } from '../src/soul-mesh/N03N02CapabilityBridge';
 
-const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
-const SUPABASE_ANON_KEY = String(process.env.SUPABASE_ANON_KEY || '').trim();
+const SUPABASE_URL = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+const SUPABASE_ANON_KEY = String(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
 
 type ChatAttachment = { name?: unknown; mimeType?: unknown; data?: unknown; size?: unknown };
 type ChatRequest = {
+  capability?: unknown;
   text?: unknown;
+  audioBase64?: unknown;
+  mimeType?: unknown;
   attachments?: unknown;
   systemInstruction?: unknown;
   correlationId?: unknown;
@@ -47,9 +50,16 @@ export default async function handler(req: any, res: any) {
   if (!(await authenticate(req))) return json(res, 401, { error: 'AUTHENTICATED_SESSION_REQUIRED' });
 
   const body = req.body as ChatRequest | undefined;
+  const requestedCapability = typeof body?.capability === 'string' ? body.capability.trim() : '';
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   const attachments = decodeAttachments(body?.attachments);
-  if (!text && attachments.length === 0) return json(res, 400, { error: 'CHAT_INPUT_REQUIRED' });
+  if (requestedCapability === 'gemini.audio.transcribe') {
+    const audioBase64 = typeof body?.audioBase64 === 'string' ? body.audioBase64.trim() : '';
+    const mimeType = typeof body?.mimeType === 'string' ? body.mimeType.trim() : '';
+    if (!audioBase64 || !mimeType) return json(res, 400, { error: 'GEMINI_AUDIO_INPUT_REQUIRED' });
+  } else if (!text && attachments.length === 0) {
+    return json(res, 400, { error: 'CHAT_INPUT_REQUIRED' });
+  }
 
   const correlationId =
     typeof body?.correlationId === 'string' && body.correlationId.trim()
@@ -61,7 +71,12 @@ export default async function handler(req: any, res: any) {
 
   try {
     let result: any;
-    if (attachments.length === 0) {
+    if (requestedCapability === 'gemini.audio.transcribe') {
+      result = await bridge.geminiTranscribe({
+        audioBase64: (body?.audioBase64 as string).trim(),
+        mimeType: (body?.mimeType as string).trim(),
+      }, correlationId);
+    } else if (attachments.length === 0) {
       result = await bridge.geminiText({
         text,
         ...(typeof body?.systemInstruction === 'string' && body.systemInstruction.trim()
@@ -83,7 +98,9 @@ export default async function handler(req: any, res: any) {
     }
 
     const payload = result?.payload as Record<string, unknown> | undefined;
-    const output = typeof payload?.text === 'string' ? payload.text.trim() : '';
+    const output = requestedCapability === 'gemini.audio.transcribe'
+      ? (typeof payload?.transcript === 'string' ? payload.transcript.trim() : '')
+      : (typeof payload?.text === 'string' ? payload.text.trim() : '');
     if (!output) return json(res, 502, {
       error: 'GEMINI_EMPTY_RESPONSE',
       correlationId: result?.correlationId ?? correlationId,
@@ -94,7 +111,7 @@ export default async function handler(req: any, res: any) {
       correlationId: result?.correlationId ?? correlationId,
       provider: 'N02',
       transport: 'SOUL_MESH',
-      capability: attachments.length === 0 ? 'gemini.text.generate' : 'gemini.multimodal.generate',
+      capability: requestedCapability || (attachments.length === 0 ? 'gemini.text.generate' : 'gemini.multimodal.generate'),
       latencyMs: Date.now() - startedAt,
       observed: true,
       dataSource: 'GEMINI_PROVIDER_RESPONSE',
