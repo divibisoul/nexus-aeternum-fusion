@@ -67,6 +67,8 @@ async function generate(model: string, body: unknown, attempts = 3): Promise<Gem
 export type GeminiTranscriptionOptions = {
   model?: string;
   prompt?: string;
+  diarization?: boolean;
+  wordTimestamp?: boolean;
 };
 
 export async function transcribeAudio(
@@ -75,6 +77,10 @@ export async function transcribeAudio(
   options: GeminiTranscriptionOptions = {},
 ): Promise<string> {
   if (!base64.trim() || !mimeType.trim()) throw new Error('GEMINI_AUDIO_INPUT_REQUIRED');
+
+  const audioTranscriptionConfig: Record<string, unknown> = {};
+  if (options.diarization) audioTranscriptionConfig.diarization = true;
+  if (options.wordTimestamp) audioTranscriptionConfig.wordTimestamp = true;
 
   const data = await generate(
     options.model || envModel('GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-transcribe'),
@@ -88,6 +94,9 @@ export async function transcribeAudio(
           { inlineData: { mimeType, data: base64 } },
         ],
       }],
+      ...(Object.keys(audioTranscriptionConfig).length > 0
+        ? { generationConfig: { audioTranscriptionConfig } }
+        : {}),
     },
   );
 
@@ -160,7 +169,9 @@ export async function translateAudio(
 
 export async function identifySpeakers(base64: string, mimeType: string): Promise<string> {
   return transcribeAudio(base64, mimeType, {
-    prompt: 'Transcribe this audio with explicit speaker-turn labels (for example SPEAKER_1, SPEAKER_2) whenever the audio permits. Do not claim personal identities. Return only the diarized transcript.',
+    prompt: 'Return only the diarized transcript. Do not claim personal identities.',
+    diarization: true,
+    wordTimestamp: true,
   });
 }
 
