@@ -17,6 +17,9 @@ export const N03_CAPABILITIES: readonly N03CapabilityDescriptor[] = [
   { id: 'audio.transcribe', version: '1.0', nucleus: 'N03', kind: 'local', input: ['audio/*'], output: ['text/plain'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: [] },
   { id: 'audio.analyze.emotion', version: '1.0', nucleus: 'N03', kind: 'local', input: ['audio/*'], output: ['application/json'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: ['audio.transcribe'] },
   { id: 'speech.synthesize', version: '1.0', nucleus: 'N03', kind: 'local', input: ['text/plain'], output: ['audio/*'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: [] },
+  { id: 'speech.translate', version: '1.0', nucleus: 'N03', kind: 'local', input: ['audio/*'], output: ['text/plain'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: ['audio.transcribe'] },
+  { id: 'audio.summarize', version: '1.0', nucleus: 'N03', kind: 'local', input: ['audio/*'], output: ['text/plain'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: [] },
+  { id: 'speaker.identify', version: '1.0', nucleus: 'N03', kind: 'local', input: ['audio/*'], output: ['text/plain'], status: 'AVAILABLE', privacy: 1, cost: 0, dependencies: ['audio.transcribe'] },
 ];
 
 export const N03_MESH_PEERS: readonly Exclude<SoulNucleus, 'N03'>[] = ['N01', 'N02', 'N04', 'N05', 'N06'];
