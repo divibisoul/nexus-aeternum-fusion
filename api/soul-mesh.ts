@@ -1,4 +1,4 @@
-import { analyzeEmotion, geminiConfigured, synthesizeSpeech, transcribeAudio } from '../src/mesh/GeminiAudioAdapter';
+import { analyzeEmotion, geminiConfigured, synthesizeSpeech, summarizeAudio, transcribeAudio, translateAudio, identifySpeakers } from '../src/mesh/GeminiAudioAdapter';
 import { N03_AUDIO_CAPABILITIES } from '../src/mesh/N03AudioCapabilityRegistry';
 import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
@@ -66,6 +66,9 @@ function meshAuthorized(req:any, message:any):boolean{
 router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
 router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
 router.register('audio.analyze.emotion', async m => { const a=audioInput(m.payload); return {analysis:await analyzeEmotion(a.data,a.mimeType),provider:'gemini'}; });
+router.register('audio.summarize', async m => { const a=audioInput(m.payload); return {summary:await summarizeAudio(a.data,a.mimeType),provider:'gemini'}; });
+router.register('speech.translate', async m => { const a=audioInput(m.payload); const targetLanguage=String((m.payload as any)?.targetLanguage||'Português do Brasil'); return {...await translateAudio(a.data,a.mimeType,targetLanguage),provider:'gemini'}; });
+router.register('speaker.identify', async m => { const a=audioInput(m.payload); return {transcript:await identifySpeakers(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
 router.register('mesh.ping', m => ({ok:true,handler:'N03.mesh.ping',echoed:m.payload,processedAt:Date.now()}));
 router.register('mesh.describe', () => {
