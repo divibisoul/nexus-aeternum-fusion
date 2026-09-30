@@ -1,8 +1,9 @@
 # SOUL Handoff — N03
 **Date:** 2026-09-30
-**Main state:** neural-parameters federation rescue PR #27 merged at **dd629ebcef21595a165cab46dc919328950350ad**.
+**Main state:** PR #28 merged at **81c90ddd7eadcec1c894ca333359f9be3c2e1c4a**.
 **Role:** audio perception/speech runtime and N03 Mesh transport.
-**Activated:** N03→N07 neural bridge now exposes neural.forward, neural.learn, neural.parameters and learning.feedback while preserving HMAC/correlation/timeout semantics.
-**Historical front:** remaining open/old PRs must be compared against current MAIN; do not restore older transport files that duplicate the current bridge.
-**Evidence state:** source-level implementation verified from current MAIN. Live bidirectional commissioning is still UNVERIFIED.
-**Next bounded cycle:** inspect the next unique N03 audio/perception residue only; promote a capability only when its real adapter exists and its executable state is evidenced.
+**Activated:** M5 PerceptionModule + entrypoint, executable audio inventory, Clareira contract/bridge, N07 cognitive bridge with canonical soul-mesh/1 + 1.1.0 + HMAC, N03→N02 inference.reason path, N04 executable tool validation, and N07 SuperGPU execute/parallel helpers.
+**Structural correction:** N03 public Mesh validation and manifest now include N07; the previous validator would have rejected N07 despite the peer client already targeting it.
+**Historical fronts:** #14/#15/#16 were selectively rescued and closed; newer GeminiAudioAdapter, NexusCoreProcessor, HMAC and transport code was preserved rather than reverted.
+**Evidence state:** source-level implementation is verified from MAIN; live N03↔N02/N04/N07 commissioning remains UNVERIFIED/BLOCKED_ENV until real endpoints and HMAC evidence exist.
+**Next bounded cycle:** one unique N03 residue only; end that cycle as RESCUED, ABSORBED, BLOCKED_ENV or UNMEASURABLE.
