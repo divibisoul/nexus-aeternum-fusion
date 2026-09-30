@@ -1,0 +1,13 @@
+{
+  "repository":"divibisoul/nexus-aeternum-fusion",
+  "nucleus":"N03",
+  "targets":[
+    {"id":"knowledge","terms":["knowledge","context","retrieval"],"paths":["src","api","docs"]},
+    {"id":"multimodality","terms":["multimodal","vision","audio","image"],"paths":["src","api"]},
+    {"id":"audio-transcription","terms":["audio.transcribe","transcribeAudio"],"paths":["src","api"]},
+    {"id":"speech-synthesis","terms":["speech.synthesize","synthesizeSpeech"],"paths":["src","api"]},
+    {"id":"emotion-analysis","terms":["audio.analyze.emotion","analyzeEmotion"],"paths":["src","api"]},
+    {"id":"mesh","terms":["SoulMesh","soul-mesh","HMAC","heartbeat"],"paths":["src","api","scripts"]},
+    {"id":"capability-routing","terms":["CapabilityRegistry","SoulMeshRouter","capability"],"paths":["src","api"]}
+  ]
+}
