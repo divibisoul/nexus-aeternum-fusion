@@ -29,6 +29,9 @@ describe('NexusCoreProcessor executable capability boundary', () => {
     expect(registered).toContain('voice-output');
     expect(registered).toContain('speech-processing');
     expect(registered).toContain('emotion-analysis');
+    expect(registered).toContain('audio-summarize');
+    expect(registered).toContain('speech-translate');
+    expect(registered).toContain('speaker-identify');
     expect(registered).not.toContain('spiritual-wisdom');
   });
 });
