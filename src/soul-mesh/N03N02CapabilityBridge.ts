@@ -6,6 +6,11 @@ export const N02_PEER_CAPABILITIES = [
   'cognitive-processing',
   'ai.generate',
   'ai.multimodal',
+  'gemini.text.generate',
+  'gemini.multimodal.generate',
+  'gemini.audio.transcribe',
+  'gemini.audio.analyze',
+  'gemini.speech.synthesize',
   'mesh.describe',
 ] as const;
 
@@ -32,6 +37,26 @@ export class N03N02CapabilityBridge {
 
   async multimodal(payload: unknown) {
     return this.request('ai.multimodal', payload);
+  }
+
+  async geminiText(payload: unknown) {
+    return this.request('gemini.text.generate', payload);
+  }
+
+  async geminiMultimodal(payload: unknown) {
+    return this.request('gemini.multimodal.generate', payload);
+  }
+
+  async geminiTranscribe(payload: unknown) {
+    return this.request('gemini.audio.transcribe', payload);
+  }
+
+  async geminiAudioAnalyze(payload: unknown) {
+    return this.request('gemini.audio.analyze', payload);
+  }
+
+  async geminiSpeechSynthesize(payload: unknown) {
+    return this.request('gemini.speech.synthesize', payload);
   }
 
   async describePeer(payload: unknown = {}) {
