@@ -2,7 +2,6 @@ import { N03N02CapabilityBridge } from '../src/soul-mesh/N03N02CapabilityBridge'
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const SUPABASE_ANON_KEY = String(process.env.SUPABASE_ANON_KEY || '').trim();
-const MAX_BODY_BYTES = 6 * 1024 * 1024;
 
 type ChatAttachment = { name?: unknown; mimeType?: unknown; data?: unknown; size?: unknown };
 type ChatRequest = {
@@ -68,7 +67,7 @@ export default async function handler(req: any, res: any) {
         ...(typeof body?.systemInstruction === 'string' && body.systemInstruction.trim()
           ? { systemInstruction: body.systemInstruction.trim() }
           : {}),
-      });
+      }, correlationId);
     } else {
       result = await bridge.geminiMultimodal({
         contents: [{
@@ -80,7 +79,7 @@ export default async function handler(req: any, res: any) {
             ...(text ? [{ text }] : []),
           ],
         }],
-      });
+      }, correlationId);
     }
 
     const payload = result?.payload as Record<string, unknown> | undefined;
