@@ -33,7 +33,7 @@ async function register(peer: string, envName: string) {
     capability: 'mesh.handshake',
     payload: {
       nucleus: 'N03',
-      capabilities: N03_AUDIO_CAPABILITIES.map(c => c.id),
+      capabilities: N03_AUDIO_CAPABILITIES.filter(c => c.status === 'implemented').map(c => c.id),
       inChannels: peers.map(([p]) => `N03.IN.${p}`),
       outChannels: peers.map(([p]) => `N03.OUT.${p}`),
     },
