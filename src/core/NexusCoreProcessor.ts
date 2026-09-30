@@ -1,5 +1,12 @@
 import type { NexusPilotPort, NexusPilotRequest, NexusPilotResponse } from './NexusPilotPort';
-import { analyzeEmotion, synthesizeSpeech, transcribeAudio } from '../mesh/GeminiAudioAdapter';
+import {
+  analyzeEmotion,
+  identifySpeakers,
+  summarizeAudio,
+  synthesizeSpeech,
+  transcribeAudio,
+  translateAudio,
+} from '../mesh/GeminiAudioAdapter';
 
 export type NexusCoreCapability =
   | 'voice-input'
@@ -8,6 +15,9 @@ export type NexusCoreCapability =
   | 'multimodal-input'
   | 'cognitive-ui'
   | 'emotion-analysis'
+  | 'audio-summarize'
+  | 'speech-translate'
+  | 'speaker-identify'
   | 'spiritual-wisdom'
   | 'plant-knowledge'
   | 'ritual-knowledge'
@@ -36,6 +46,9 @@ const DEFAULT_CAPABILITIES: readonly NexusCoreCapability[] = [
   'multimodal-input',
   'cognitive-ui',
   'emotion-analysis',
+  'audio-summarize',
+  'speech-translate',
+  'speaker-identify',
   'spiritual-wisdom',
   'plant-knowledge',
   'ritual-knowledge',
@@ -92,6 +105,30 @@ export class NexusCoreProcessor {
         this.requireString(request, 'mimeType'),
       );
       return { transcript, emotion };
+    });
+    this.registerHandler('audio-summarize', async input => {
+      const request = this.requireRecord(input, 'audio-summarize');
+      return summarizeAudio(
+        this.requireString(request, 'audioBase64'),
+        this.requireString(request, 'mimeType'),
+      );
+    });
+    this.registerHandler('speech-translate', async input => {
+      const request = this.requireRecord(input, 'speech-translate');
+      return translateAudio(
+        this.requireString(request, 'audioBase64'),
+        this.requireString(request, 'mimeType'),
+        typeof request.targetLanguage === 'string' && request.targetLanguage.trim()
+          ? request.targetLanguage
+          : 'Português do Brasil',
+      );
+    });
+    this.registerHandler('speaker-identify', async input => {
+      const request = this.requireRecord(input, 'speaker-identify');
+      return identifySpeakers(
+        this.requireString(request, 'audioBase64'),
+        this.requireString(request, 'mimeType'),
+      );
     });
   }
 
