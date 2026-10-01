@@ -9,14 +9,14 @@ export function configuredPeers() {
   return peers.map(nucleus => ({ nucleus, url: (globalThis as any).process?.env?.[envKey(nucleus)]?.trim().replace(/\/$/, '') ?? '' }));
 }
 
-export function createN03Request(target: N03Peer, capability: string, payload: unknown): SoulMeshMessage {
-  return createMessage({ source: 'N03', target, kind: 'request', capability, payload, correlationId: crypto.randomUUID() });
+export function createN03Request(target: N03Peer, capability: string, payload: unknown, correlationId = crypto.randomUUID()): SoulMeshMessage {
+  return createMessage({ source: 'N03', target, kind: 'request', capability, payload, correlationId });
 }
 
-export async function sendFromN03(target: N03Peer, capability: string, payload: unknown, timeoutMs = 15000): Promise<unknown> {
+export async function sendFromN03(target: N03Peer, capability: string, payload: unknown, timeoutMs = 15000, correlationId = crypto.randomUUID()): Promise<unknown> {
   const peer = configuredPeers().find(item => item.nucleus === target);
   if (!peer?.url) throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);
-  const message = createN03Request(target, capability, payload);
+  const message = createN03Request(target, capability, payload, correlationId);
   const transport = new SoulMeshHttpTransport();
   const token = (globalThis as any).process?.env?.SOUL_MESH_TOKEN;
   const response = await Promise.race([
