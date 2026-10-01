@@ -1,4 +1,4 @@
-name: N05 validation diagnostics
+name: N03 validation diagnostics
 on:
   push:
     branches: [main]
@@ -29,8 +29,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Verify toolchain
         run: node --version && bun --version
-      - name: Install dependencies from package-lock
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install dependencies from canonical Bun lockfile
+        run: bun install --frozen-lockfile
       - name: Build
         run: bun run build
       - name: Lint
