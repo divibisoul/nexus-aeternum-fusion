@@ -15,9 +15,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Verify lockfile is synchronized
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Verify canonical Bun lockfile
+        run: bun install --frozen-lockfile
       - name: Typecheck Mesh adapter
-        run: npx tsc -p tsconfig.mesh.json --noEmit
+        run: bun x tsc -p tsconfig.mesh.json --noEmit
       - name: Build web runtime
-        run: npm run build
+        run: bun run build
