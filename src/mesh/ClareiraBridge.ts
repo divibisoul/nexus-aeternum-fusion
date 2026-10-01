@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { isClareiraPacket, type ClareiraMetrics, type ClareiraPacket } from '../../shared/clareira-contract';
 import { SoulMeshPeerClient } from '../../lib/soul-mesh/SoulMeshPeerClient';
 
-let ingested=0, processed=0, dropped=0, errored=0, inFlight=0, lastLatency=0, startedAt=Date.now();
+let ingested=0, processed=0, dropped=0, errored=0, inFlight=0, lastLatency=0;
+const startedAt=Date.now();
 const samples:number[]=[];
 
 const peers = new SoulMeshPeerClient('N03');
@@ -26,7 +27,7 @@ export async function forwardClareiraToN01(packet:ClareiraPacket): Promise<unkno
   }
 }
 
-export function recordClareiraDrop(packet: ClareiraPacket, reason: string) {
+export function recordClareiraDrop(packet:ClareiraPacket, reason:string) {
   if (!isClareiraPacket(packet)) throw new Error('INVALID_CLAREIRA_PACKET');
   dropped++;
   inFlight=Math.max(0,inFlight-1);
