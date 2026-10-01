@@ -62,6 +62,30 @@ export class N03SynergyOrchestrator {
     return { correlationId, steps: results };
   }
 
+  externalCapability(
+    capability: string,
+    payload: unknown,
+    workloads: unknown[] = [],
+    candidate: Record<string, unknown> = {},
+    correlationId = randomUUID(),
+  ) {
+    const name = capability.trim();
+    if (!name) throw new Error('N03_EXTERNAL_CAPABILITY_REQUIRED');
+    return this.execute([{
+      target: 'N02',
+      capability: name,
+      payload: {
+        payload,
+        metadata: {
+          prefrontal_orbital: 'true',
+          workloads_json: JSON.stringify(workloads),
+          candidate_json: JSON.stringify(candidate.capability ? candidate : { ...candidate, capability: name }),
+          strategy: 'n03-synergy-external-preflight',
+        },
+      },
+    }], correlationId);
+  }
+
   perceptionToReasoning(input: unknown) {
     return this.execute([{ target: 'N02', capability: 'inference.reason', payload: { perception: input } }]);
   }
