@@ -4,7 +4,7 @@ N03 (`nexus-aeternum-fusion`) é o núcleo destinado à percepção auditiva e �
 
 ## Soul Mesh — topologia K6
 
-N03 é um nó da rede circular de 6 núcleos. Ele possui cinco conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05 e N06**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
+N03 é um nó da rede de 7 núcleos. Ele possui cinco conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05 e N06**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
 
 A fundação Mesh está em `src/mesh/`:
 
