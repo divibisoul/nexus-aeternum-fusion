@@ -21,6 +21,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Reconcile Bun lock with package manifest
+        run: bun install --lockfile-only
       - name: Apply published non-vulnerable fixes
         run: bun audit fix
       - name: Validate canonical Bun lockfile after remediation
