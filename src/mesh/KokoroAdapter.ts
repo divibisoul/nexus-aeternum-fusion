@@ -96,9 +96,8 @@ export function describeKokoroAdapter(): KokoroAdapterEvidence {
   };
 }
 
-export function isKokoroAdapterConfigured(): boolean {
-  const e = describeKokoroAdapter();
-  return e.enabled && e.sourcePresent;
+export function isKokoroAdapterExecutable(): boolean {
+  return describeKokoroAdapter().state === 'PASS';
 }
 
 export async function synthesizeWithKokoro(input: KokoroTextInput): Promise<Record<string, unknown>> {
