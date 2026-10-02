@@ -1,0 +1,38 @@
+name: Regenerate Bun lockfile for security overrides
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - package.json
+      - .github/workflows/regenerate-bun-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Regenerate canonical Bun lockfile
+        run: bun install --lockfile-only
+      - name: Commit lockfile only when changed
+        run: |
+          if git diff --quiet -- bun.lockb bun.lock; then
+            echo "Bun lockfile already reflects package.json overrides."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lockb bun.lock 2>/dev/null || true
+          git commit -m "chore(deps): regenerate Bun lockfile"
+          git push
