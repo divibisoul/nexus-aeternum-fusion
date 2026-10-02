@@ -1,0 +1,31 @@
+export const N03_RESIDENT_AGENT = {
+  id: 'N03.resident',
+  name: 'Agent-Audio Steward',
+  nucleus: 'N03',
+  version: '1.0.0',
+  role: 'perception-voice-multimodal',
+  executionMode: 'embedded-local-worker',
+  lifecycle: 'BOUND',
+  repositoryWrite: false,
+  superpowers: {
+    revision: '8ca22dba9a94f28898bbce59f2537ff4d87c747d',
+    mode: 'development-methodology-and-skill-pack',
+    runtimePolicyEngine: false,
+  },
+  skills: [
+    'test-driven-development',
+    'systematic-debugging',
+    'verification-before-completion',
+    'requesting-code-review',
+  ],
+  publishedCapabilities: [
+    'mesh.health',
+    'mesh.discovery',
+    'mesh.resident.describe@1.0.0',
+    'audio.transcribe',
+    'audio.transcribe.whisper@1.0.0',
+    'speech.synthesize',
+  ],
+  authority: 'N03 owns perception/voice/multimodal execution; providers are implementation backends.',
+  evidence: 'soul-evidence/1',
+} as const;
