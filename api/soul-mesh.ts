@@ -4,6 +4,8 @@ import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
+import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from '../src/mesh/WhisperAdapter';
+import { N03_RESIDENT_AGENT } from '../src/mesh/N03ResidentAgent';
 
 const NUCLEUS_ID = 'N03' as const;
 const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07']);
@@ -15,7 +17,7 @@ const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
 const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','mesh.resident.describe@1.0.0','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
 
 function response(res:any, m:any, capability:string, payload:unknown, status=200){
   const base:any={
@@ -70,6 +72,20 @@ router.register('audio.summarize', async m => { const a=audioInput(m.payload); r
 router.register('speech.translate', async m => { const a=audioInput(m.payload); const targetLanguage=String((m.payload as any)?.targetLanguage||'Português do Brasil'); return {...await translateAudio(a.data,a.mimeType,targetLanguage),provider:'gemini'}; });
 router.register('speaker.identify', async m => { const a=audioInput(m.payload); return {transcript:await identifySpeakers(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
+router.register('mesh.resident.describe@1.0.0', () => ({ ...N03_RESIDENT_AGENT, whisper: describeWhisperAdapter() }));
+if (isWhisperAdapterExecutable()) {
+  router.register('audio.transcribe.whisper@1.0.0', async m => {
+    const a = audioInput(m.payload);
+    return transcribeWithWhisper({
+      data: a.data,
+      mimeType: a.mimeType,
+      language: typeof (m.payload as any)?.language === 'string' ? (m.payload as any).language : undefined,
+      task: (m.payload as any)?.task === 'translate' ? 'translate' : 'transcribe',
+      wordTimestamps: (m.payload as any)?.wordTimestamps === true,
+      initialPrompt: typeof (m.payload as any)?.initialPrompt === 'string' ? (m.payload as any).initialPrompt : undefined,
+    });
+  });
+}
 router.register('mesh.ping', m => ({ok:true,handler:'N03.mesh.ping',echoed:m.payload,processedAt:Date.now()}));
 router.register('mesh.describe', () => {
   const agents = router.listAgents();
@@ -82,16 +98,18 @@ router.register('mesh.describe', () => {
     executableCapabilities,
     capabilities: declaredCapabilities(),
     agents,
+    whisper: describeWhisperAdapter(),
+    residentAgent: N03_RESIDENT_AGENT,
     status: 'online',
     contractVersion: SOUL_MESH_CONTRACT_VERSION,
   };
 });
-router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_AUDIO_CAPABILITIES,agents:router.listAgents(),contractVersion:SOUL_MESH_CONTRACT_VERSION}));
+router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_AUDIO_CAPABILITIES,agents:router.listAgents(),residentAgent:N03_RESIDENT_AGENT,whisper:describeWhisperAdapter(),contractVersion:SOUL_MESH_CONTRACT_VERSION}));
 
 startN03PeerRegistration();
 
 export default async function handler(req:any,res:any){
-  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents()});
+  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents(),residentAgent:N03_RESIDENT_AGENT,whisper:describeWhisperAdapter()});
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
   const m=req.body;
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});
