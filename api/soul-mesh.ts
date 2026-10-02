@@ -5,7 +5,7 @@ import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
 import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from '../src/mesh/WhisperAdapter';
-import { describeKokoroAdapter, isKokoroAdapterConfigured, synthesizeWithKokoro } from '../src/mesh/KokoroAdapter';
+import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from '../src/mesh/KokoroAdapter';
 import { N03_RESIDENT_AGENT } from '../src/mesh/N03ResidentAgent';
 
 const NUCLEUS_ID = 'N03' as const;
@@ -87,7 +87,7 @@ if (isWhisperAdapterExecutable()) {
     });
   });
 }
-if (isKokoroAdapterConfigured()) {
+if (isKokoroAdapterExecutable()) {
   router.register('speech.synthesize.kokoro@1.0.0', async m => {
     const text = String((m.payload as any)?.text || '');
     return synthesizeWithKokoro({
