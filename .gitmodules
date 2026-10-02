@@ -1,0 +1,11 @@
+[submodule "integrations/soul-upstream/agentscope"]
+	path = integrations/soul-upstream/agentscope
+	url = https://github.com/agentscope-ai/agentscope.git
+
+[submodule "integrations/soul-upstream/whisper"]
+	path = integrations/soul-upstream/whisper
+	url = https://github.com/openai/whisper.git
+
+[submodule "integrations/soul-upstream/kokoro"]
+	path = integrations/soul-upstream/kokoro
+	url = https://github.com/hexgrad/kokoro.git
