@@ -14,9 +14,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npm audit --audit-level=high
+          bun-version: latest
+      - name: Validate canonical Bun lockfile
+        run: bun install --frozen-lockfile --dry-run
+      - name: Security audit
+        run: bun audit --audit-level=high
