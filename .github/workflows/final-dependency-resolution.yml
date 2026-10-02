@@ -44,6 +44,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json bun.lockb bun.lock 2>/dev/null || true
+          git add package.json bun.lock 2>/dev/null || true
+          git add -f bun.lockb
           git commit -m "chore(deps): remediate N03 audit vulnerabilities"
           git push
