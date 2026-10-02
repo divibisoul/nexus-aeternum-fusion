@@ -110,15 +110,15 @@ export async function synthesizeWithKokoro(input: KokoroTextInput): Promise<Reco
   const text = input.text.trim();
   const c = config();
   if (!text) {
-    return { state: 'FAIL', code: 'KOKORO_TEXT_EMPTY', capability: KOKORO_CAPABILITY, ...evidence };
+    return { ...evidence, state: 'FAIL', code: 'KOKORO_TEXT_EMPTY', capability: KOKORO_CAPABILITY };
   }
   if (text.length > c.maxTextLength) {
-    return { state: 'FAIL', code: 'KOKORO_TEXT_TOO_LARGE', maxTextLength: c.maxTextLength, capability: KOKORO_CAPABILITY, ...evidence };
+    return { ...evidence, state: 'FAIL', code: 'KOKORO_TEXT_TOO_LARGE', maxTextLength: c.maxTextLength, capability: KOKORO_CAPABILITY };
   }
 
   const voice = (input.voice ?? c.voice).trim();
   if (!voice) {
-    return { state: 'FAIL', code: 'KOKORO_VOICE_REQUIRED', capability: KOKORO_CAPABILITY, ...evidence };
+    return { ...evidence, state: 'FAIL', code: 'KOKORO_VOICE_REQUIRED', capability: KOKORO_CAPABILITY };
   }
 
   const payload = JSON.stringify({
