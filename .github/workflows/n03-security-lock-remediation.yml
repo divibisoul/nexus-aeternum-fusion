@@ -1,4 +1,5 @@
 name: N03 Security Lock Remediation
+# Executes real Bun audit remediation; no advisory is ignored.
 
 on:
   push:
