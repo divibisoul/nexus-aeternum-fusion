@@ -14,7 +14,24 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Check dependency graph availability
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          status="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.security_and_analysis.dependency_graph.status // "disabled-or-unavailable"')"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          if [ "${status}" != "enabled" ]; then
+            echo "BLOCKED_ENV: GitHub Dependency Graph is not enabled for this repository; dependency review cannot produce a valid security verdict."
+          fi
       - name: Review dependency changes
+        if: steps.graph.outputs.status == 'enabled'
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+      - name: Preserve blocked evidence
+        if: steps.graph.outputs.status != 'enabled'
+        run: |
+          echo "Dependency review state: BLOCKED_ENV"
+          echo "No security PASS is claimed."
