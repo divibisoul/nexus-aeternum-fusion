@@ -9,6 +9,7 @@ export const N03_AUDIO_CAPABILITIES:AudioCapability[]=[
 {id:'audio.listen.continuous',status:'adapter-required',provider:'Browser/device audio runtime',description:'Continuous listening requires a device/audio stream adapter and remains explicitly unbound.'},
 {id:'audio.denoise',status:'adapter-required',provider:'Audio DSP/runtime',description:'Noise reduction remains an audio DSP capability and is not faked by Gemini.'},
 {id:'speaker.identify',status:'implemented',provider:'Gemini 3.5 Transcribe',description:'Speaker-turn diarization only; it does not claim personal identity.'},
+{id:'audio.transcribe.whisper@1.0.0',status:'adapter-required',provider:'OpenAI Whisper',description:'Explicit local Whisper provider adapter; requires pinned source checkout and pre-provisioned model weights.'},
 ];
 export function hasAudioCapability(id:string){return N03_AUDIO_CAPABILITIES.some(c=>c.id===id);}
 
