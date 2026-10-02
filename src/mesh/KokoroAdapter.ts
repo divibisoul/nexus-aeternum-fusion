@@ -161,28 +161,24 @@ export async function synthesizeWithKokoro(input: KokoroTextInput): Promise<Reco
     };
   }
   if (result.code !== 0) {
-    return {
-      state: 'FAIL',
+    return { ...evidence, state: 'FAIL',
       code: 'KOKORO_PROCESS_FAILED',
       exitCode: result.code,
       signal: result.signal,
       stderr: stderr.slice(-4000),
       capability: KOKORO_CAPABILITY,
-      ...evidence,
-    };
+      };
   }
 
   try {
     const output = JSON.parse(stdout.trim()) as Record<string, unknown>;
     return { ...output, capability: KOKORO_CAPABILITY, providerRevision: KOKORO_REVISION };
   } catch {
-    return {
-      state: 'FAIL',
+    return { ...evidence, state: 'FAIL',
       code: 'KOKORO_INVALID_RUNNER_OUTPUT',
       stdout: stdout.slice(-4000),
       stderr: stderr.slice(-4000),
       capability: KOKORO_CAPABILITY,
-      ...evidence,
-    };
+      };
   }
 }
