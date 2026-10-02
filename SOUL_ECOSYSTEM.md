@@ -11,5 +11,9 @@ This public repository is a component of the **SOUL ecosystem**. External open-s
 
 Canonical SOUL integration map: https://github.com/divibisoul/Orquestrador-/blob/main/integrations/external-capabilities.json
 
+## Functional integration boundary
+
+The binding contract for this component is recorded in `integrations/capability-boundary.json`. It states why each upstream capability is present, the canonical routing boundary, the engineering agent responsible, and the evidence gate before runtime activation.
+
 ## Runtime truth
 Structural attachment does not by itself claim runtime activation. Activation requires adapters, configuration and passing end-to-end tests.
