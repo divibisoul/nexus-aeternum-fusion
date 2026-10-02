@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   resolve:
@@ -15,36 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Reconcile Bun lock with package manifest
-        run: bun install --lockfile-only
-      - name: Apply published non-vulnerable fixes
-        run: bun audit fix
-      - name: Validate canonical Bun lockfile after remediation
+      - name: Validate canonical Bun lockfile
         run: bun install --frozen-lockfile --dry-run
-      - name: Security audit after remediation
+      - name: Security audit
         run: bun audit --audit-level=high
-      - name: Persist only Bun-managed remediation
-        run: |
-          set -euo pipefail
-          changed="$(git diff --name-only)"
-          if [ -n "$changed" ] && printf '%s\n' "$changed" | grep -vE '^(package.json|bun.lockb|bun.lock)$'; then
-            echo "Unexpected files changed by Bun audit remediation:"
-            printf '%s\n' "$changed"
-            exit 1
-          fi
-          if git diff --quiet -- package.json bun.lockb bun.lock; then
-            echo "No Bun-managed dependency changes to persist."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json bun.lock 2>/dev/null || true
-          git add -f bun.lockb
-          git commit -m "chore(deps): remediate N03 audit vulnerabilities"
-          git push
