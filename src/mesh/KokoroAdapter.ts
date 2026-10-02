@@ -151,12 +151,12 @@ export async function synthesizeWithKokoro(input: KokoroTextInput): Promise<Reco
   if ('error' in result && result.error) {
     const message = result.error instanceof Error ? result.error.message : String(result.error);
     return {
+      ...evidence,
       state: message === 'KOKORO_TIMEOUT' ? 'FAIL' : 'DEGRADED',
       code: message === 'KOKORO_TIMEOUT' ? 'KOKORO_TIMEOUT' : 'KOKORO_PROCESS_UNAVAILABLE',
       detail: message,
       stderr: stderr.slice(-4000),
       capability: KOKORO_CAPABILITY,
-      ...evidence,
     };
   }
   if (result.code !== 0) {
