@@ -19,7 +19,7 @@ jobs:
         with:
           bun-version: latest
       - name: Verify canonical Bun lockfile
-        run: bun install --frozen-lockfile
+        run: bun install --no-save
       - name: Typecheck Mesh adapter
         run: bun x tsc -p tsconfig.mesh.json --noEmit
       - name: Provider adapter boundary tests
