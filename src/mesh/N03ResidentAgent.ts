@@ -24,6 +24,7 @@ export const N03_RESIDENT_AGENT = {
     'mesh.resident.describe@1.0.0',
     'audio.transcribe',
     'audio.transcribe.whisper@1.0.0',
+    'speech.synthesize.kokoro@1.0.0',
     'speech.synthesize',
   ],
   authority: 'N03 owns perception/voice/multimodal execution; providers are implementation backends.',
