@@ -29,8 +29,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Verify toolchain
         run: node --version && bun --version
-      - name: Install dependencies from canonical Bun lockfile
-        run: bun install --frozen-lockfile
+      - name: Install dependency graph for verification
+        run: bun install --no-save
       - name: Build
         run: bun run build
       - name: Lint

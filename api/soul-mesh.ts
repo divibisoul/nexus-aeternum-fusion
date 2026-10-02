@@ -5,6 +5,7 @@ import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
 import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from '../src/mesh/WhisperAdapter';
+import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from '../src/mesh/KokoroAdapter';
 import { N03_RESIDENT_AGENT } from '../src/mesh/N03ResidentAgent';
 
 const NUCLEUS_ID = 'N03' as const;
@@ -72,7 +73,7 @@ router.register('audio.summarize', async m => { const a=audioInput(m.payload); r
 router.register('speech.translate', async m => { const a=audioInput(m.payload); const targetLanguage=String((m.payload as any)?.targetLanguage||'Português do Brasil'); return {...await translateAudio(a.data,a.mimeType,targetLanguage),provider:'gemini'}; });
 router.register('speaker.identify', async m => { const a=audioInput(m.payload); return {transcript:await identifySpeakers(a.data,a.mimeType),provider:'gemini'}; });
 router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
-router.register('mesh.resident.describe@1.0.0', () => ({ ...N03_RESIDENT_AGENT, whisper: describeWhisperAdapter() }));
+router.register('mesh.resident.describe@1.0.0', () => ({ ...N03_RESIDENT_AGENT, whisper: describeWhisperAdapter(), kokoro: describeKokoroAdapter() }));
 if (isWhisperAdapterExecutable()) {
   router.register('audio.transcribe.whisper@1.0.0', async m => {
     const a = audioInput(m.payload);
@@ -83,6 +84,18 @@ if (isWhisperAdapterExecutable()) {
       task: (m.payload as any)?.task === 'translate' ? 'translate' : 'transcribe',
       wordTimestamps: (m.payload as any)?.wordTimestamps === true,
       initialPrompt: typeof (m.payload as any)?.initialPrompt === 'string' ? (m.payload as any).initialPrompt : undefined,
+    });
+  });
+}
+if (isKokoroAdapterExecutable()) {
+  router.register('speech.synthesize.kokoro@1.0.0', async m => {
+    const text = String((m.payload as any)?.text || '');
+    return synthesizeWithKokoro({
+      text,
+      language: typeof (m.payload as any)?.language === 'string' ? (m.payload as any).language : undefined,
+      voice: typeof (m.payload as any)?.voice === 'string' ? (m.payload as any).voice : undefined,
+      speed: typeof (m.payload as any)?.speed === 'number' ? (m.payload as any).speed : undefined,
+      device: typeof (m.payload as any)?.device === 'string' ? (m.payload as any).device : undefined,
     });
   });
 }
@@ -99,6 +112,7 @@ router.register('mesh.describe', () => {
     capabilities: declaredCapabilities(),
     agents,
     whisper: describeWhisperAdapter(),
+    kokoro: describeKokoroAdapter(),
     residentAgent: N03_RESIDENT_AGENT,
     status: 'online',
     contractVersion: SOUL_MESH_CONTRACT_VERSION,
@@ -109,7 +123,7 @@ router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_A
 startN03PeerRegistration();
 
 export default async function handler(req:any,res:any){
-  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents(),residentAgent:N03_RESIDENT_AGENT,whisper:describeWhisperAdapter()});
+  if(req.method==='GET') return res.status(200).json({ok:true,nucleus:NUCLEUS_ID,mesh:'soul-mesh/1',contractVersion:SOUL_MESH_CONTRACT_VERSION,geminiConfigured:geminiConfigured(),peers:[...PEERS],...channels,capabilities:declaredCapabilities(),agents:router.listAgents(),residentAgent:N03_RESIDENT_AGENT,whisper:describeWhisperAdapter(),kokoro:describeKokoroAdapter()});
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
   const m=req.body;
   if(!m || typeof m!=='object' || typeof (m as any).timestamp!=='number' || Math.abs(Date.now()-(m as any).timestamp)>MAX_CLOCK_SKEW_MS) return res.status(400).json({error:'INVALID_SOUL_MESH_TIMESTAMP'});

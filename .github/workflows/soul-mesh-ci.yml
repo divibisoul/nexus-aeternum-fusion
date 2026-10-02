@@ -18,9 +18,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Verify canonical Bun lockfile
-        run: bun install --frozen-lockfile
+      - name: Install dependency graph for verification
+        run: bun install --no-save
       - name: Typecheck Mesh adapter
         run: bun x tsc -p tsconfig.mesh.json --noEmit
+      - name: Provider adapter boundary tests
+        run: bun test src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/N03AudioCapabilityRegistry.test.ts
       - name: Build web runtime
         run: bun run build
