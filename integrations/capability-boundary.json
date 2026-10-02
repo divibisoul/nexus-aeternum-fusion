@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "component": {
+    "id": "N03",
+    "role": "percepção auditiva, fala e voz"
+  },
+  "reason": "functional-complementation",
+  "upstream_capability_sources": [
+    "agentscope",
+    "whisper",
+    "kokoro"
+  ],
+  "canonical_control_plane": "divibisoul/Orquestrador-",
+  "integration": {
+    "agent_engineering": "superpowers.mesh-clareira",
+    "routing": "canonical SOUL Mesh via N07",
+    "execution": "N03 speech/multimodal boundary",
+    "verification": "audio fixture + capability discovery + output integrity",
+    "structural_state": "REAL",
+    "runtime_state": "PROJECTED"
+  },
+  "rule": "upstream source remains independent; adapter/configuration/runtime evidence is required before EXECUTABLE"
+}
