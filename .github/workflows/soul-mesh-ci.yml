@@ -18,7 +18,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Verify canonical Bun lockfile
+      - name: Install dependency graph for verification
         run: bun install --no-save
       - name: Typecheck Mesh adapter
         run: bun x tsc -p tsconfig.mesh.json --noEmit
