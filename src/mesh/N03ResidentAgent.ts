@@ -26,9 +26,12 @@ export const N03_RESIDENT_AGENT = {
     'audio.transcribe.whisper@1.0.0',
     'speech.synthesize.kokoro@1.0.0',
     'speech.synthesize',
+    'multimodal.agent.agentscope@1.0.0',
     'mesh.supergpu.execute@1.0.0',
     'superagi.fabric.execute@1.0.0',
   ],
-  authority: 'N03 owns perception/voice/multimodal execution; providers are implementation backends.',
+  upstreamProviderCount: 25,
+  externalFabric: 'N03ExternalCapabilityFabric',
+  authority: 'N03 owns perception/voice/multimodal execution; upstream providers are implementation backends.',
   evidence: 'soul-evidence/1',
 } as const;

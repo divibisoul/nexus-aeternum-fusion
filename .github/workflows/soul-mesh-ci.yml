@@ -26,3 +26,19 @@ jobs:
         run: bun test src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/N03AudioCapabilityRegistry.test.ts
       - name: Build web runtime
         run: bun run build
+
+      - name: Validate N03 25-source capability fabric
+        run: |
+          python3 - <<'PY'
+          import json
+          m=json.load(open('integrations/soul-25-augmentation.json'))
+          assert m['external_provider_count'] == 25
+          assert len(m['external_providers']) == 25
+          assert m['soul_peer_count'] == 9
+          assert m['component_id'] == 'N03'
+          print('N03 SOUL-34 / 25-UPSTREAM FABRIC: PASS')
+          PY
+      - name: N03 external audio and agent adapters
+        run: bun test src/mesh/N03AudioCapabilityRegistry.test.ts src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/AgentScopeAdapter.test.ts src/mesh/N03ExternalCapabilityFabric.test.ts
+      - name: N03 build
+        run: bun run build

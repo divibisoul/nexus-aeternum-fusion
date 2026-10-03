@@ -7,6 +7,7 @@ import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/Soul
 import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from '../src/mesh/WhisperAdapter';
 import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from '../src/mesh/KokoroAdapter';
 import { N03_RESIDENT_AGENT } from '../src/mesh/N03ResidentAgent';
+import { describeAgentScopeAdapter, isAgentScopeExecutable, runAgentScopePerception } from '../src/mesh/AgentScopeAdapter';
 
 const NUCLEUS_ID = 'N03' as const;
 const NUCLEI = new Set(['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07']);
@@ -18,7 +19,7 @@ const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
 const router = new SoulMeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','mesh.resident.describe@1.0.0','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','mesh.resident.describe@1.0.0','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id),'multimodal.agent.agentscope@1.0.0'];
 
 function response(res:any, m:any, capability:string, payload:unknown, status=200){
   const base:any={
@@ -87,6 +88,16 @@ if (isWhisperAdapterExecutable()) {
     });
   });
 }
+if (isAgentScopeExecutable()) {
+  router.register('multimodal.agent.agentscope@1.0.0', async m => {
+    const payload = (m.payload ?? {}) as any;
+    return runAgentScopePerception({
+      text: String(payload.text ?? payload.input ?? '').trim(),
+      audioBase64: typeof payload.audioBase64 === 'string' ? payload.audioBase64 : undefined,
+      audioMimeType: typeof payload.audioMimeType === 'string' ? payload.audioMimeType : undefined,
+    });
+  });
+}
 if (isKokoroAdapterExecutable()) {
   router.register('speech.synthesize.kokoro@1.0.0', async m => {
     const text = String((m.payload as any)?.text || '');
@@ -113,6 +124,7 @@ router.register('mesh.describe', () => {
     agents,
     whisper: describeWhisperAdapter(),
     kokoro: describeKokoroAdapter(),
+    agentScope: describeAgentScopeAdapter(),
     residentAgent: N03_RESIDENT_AGENT,
     status: 'online',
     contractVersion: SOUL_MESH_CONTRACT_VERSION,

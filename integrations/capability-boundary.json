@@ -6,9 +6,31 @@
   },
   "reason": "functional-complementation",
   "upstream_capability_sources": [
+    "superpowers",
+    "superagi",
+    "langgraph",
+    "crewai",
+    "microsoft-agent-framework",
+    "openhands",
+    "metagpt",
     "agentscope",
+    "letta-code",
+    "browser-use",
+    "smolagents",
+    "pydantic-ai",
+    "llama-index",
+    "dspy",
     "whisper",
-    "kokoro"
+    "kokoro",
+    "everything-claude-code",
+    "swarmclaw",
+    "mem0",
+    "letta",
+    "langfuse",
+    "vllm",
+    "sglang",
+    "ray",
+    "megatron-lm"
   ],
   "canonical_control_plane": "divibisoul/Orquestrador-",
   "integration": {
@@ -17,7 +39,9 @@
     "execution": "N03 speech/multimodal boundary",
     "verification": "audio fixture + capability discovery + output integrity",
     "structural_state": "REAL",
-    "runtime_state": "PROJECTED"
+    "runtime_state": "PROJECTED",
+    "external_fabric": "src/mesh/N03ExternalCapabilityFabric.ts"
   },
-  "rule": "upstream source remains independent; adapter/configuration/runtime evidence is required before EXECUTABLE"
+  "rule": "upstream source remains independent; adapter/configuration/runtime evidence is required before EXECUTABLE",
+  "upstream_capability_source_count": 25
 }
