@@ -1,0 +1,48 @@
+name: Sync NPM lockfile for P0 runtime baseline
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "package.json"
+      - ".github/workflows/sync-npm-lockfile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regenerate package-lock.json from package.json
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Commit lockfile when changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "No staged lockfile delta."
+            exit 0
+          fi
+          git commit -m "chore(deps): synchronize npm lockfile"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push
