@@ -1,12 +1,22 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import process from "node:process";
-import { createSoulMeshMessage, isSoulMeshMessage, type SoulMeshMessage } from "../lib/soul-mesh/SoulMeshProtocol.ts";
-import { N03_AUDIO_CAPABILITIES } from "../src/mesh/N03AudioCapabilityRegistry.ts";
 
 const HOST = process.env.SOUL_MESH_HOST ?? "0.0.0.0";
 const PORT = Number(process.env.SOUL_MESH_PORT ?? 3030);
 const MAX_BYTES = Number(process.env.SOUL_MESH_MAX_REQUEST_BYTES ?? 2 * 1024 * 1024);
-const nucleus = "N03" as const;
+
+type JsonResponder = {
+  status(code: number): JsonResponder;
+  json(value: unknown): void;
+};
+
+type MeshHandler = (req: {
+  method?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  body?: unknown;
+}, res: JsonResponder) => unknown | Promise<unknown>;
+
+const handlerModule = await import("../api/soul-mesh.ts");
+const meshHandler = handlerModule.default as MeshHandler;
 
 function writeJson(res: ServerResponse, status: number, value: unknown) {
   const body = JSON.stringify(value);
@@ -20,134 +30,127 @@ function readJson(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let total = 0;
     const chunks: Buffer[] = [];
+
     req.on("data", (chunk: Buffer | string) => {
-      const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      total += b.length;
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += buffer.length;
       if (total > MAX_BYTES) {
         reject(Object.assign(new Error("MESH_PAYLOAD_TOO_LARGE"), { statusCode: 413 }));
         req.destroy();
         return;
       }
-      chunks.push(b);
+      chunks.push(buffer);
     });
+
     req.on("end", () => {
-      try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8"))); }
-      catch { reject(Object.assign(new Error("INVALID_JSON"), { statusCode: 400 })); }
+      try {
+        resolve(chunks.length === 0 ? undefined : JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      } catch {
+        reject(Object.assign(new Error("INVALID_JSON"), { statusCode: 400 }));
+      }
     });
+
     req.on("error", reject);
   });
 }
 
-function discovery() {
-  return {
-    protocol: "soul-mesh/1",
-    contractVersion: "1.1.0",
-    nucleus,
-    status: "AVAILABLE",
-    evidenceState: "PROJECTED",
-    capabilities: N03_AUDIO_CAPABILITIES.map(capability => ({
-      id: capability.id,
-      owner: nucleus,
-      status: capability.status === "implemented" ? "DECLARED" : "DEGRADED",
-      provider: capability.provider,
-      description: capability.description
-    })),
-    transport: { protocol: "http", endpoint: "http://" + HOST + ":" + PORT + "/mesh/in" },
-    runtime: "nexus-aeternum-fusion"
-  };
+function toHeaderRecord(headers: IncomingMessage["headers"]) {
+  const out: Record<string, string | string[] | undefined> = {};
+  for (const [key, value] of Object.entries(headers)) out[key] = value;
+  return out;
 }
 
-function errorFor(message: SoulMeshMessage | undefined, code: string, detail?: string) {
-  return createSoulMeshMessage({
-    source: nucleus,
-    target: message?.source ?? "N01",
-    kind: "error",
-    capability: message?.capability,
-    correlationId: message?.correlationId ?? crypto.randomUUID(),
-    payload: { code, ...(detail ? { detail } : {}) }
-  });
+async function dispatchToCanonicalHandler(req: IncomingMessage, res: ServerResponse, body: unknown) {
+  let statusCode = 200;
+  let bodyWritten = false;
+
+  const adapter: JsonResponder = {
+    status(code: number) {
+      statusCode = code;
+      return adapter;
+    },
+    json(value: unknown) {
+      bodyWritten = true;
+      writeJson(res, statusCode, value);
+    },
+  };
+
+  await meshHandler({
+    method: req.method,
+    headers: toHeaderRecord(req.headers),
+    body,
+  }, adapter);
+
+  if (!bodyWritten && !res.writableEnded) {
+    writeJson(res, statusCode, { error: "MESH_HANDLER_NO_RESPONSE" });
+  }
 }
 
 const server = createServer(async (req, res) => {
   try {
-    if (req.method === "GET" && req.url === "/ready") {
-      const production = process.env.NODE_ENV === "production";
-      const meshSecretConfigured = Boolean(process.env.SOUL_MESH_HMAC_SECRET?.trim());
-      const ready = !production || meshSecretConfigured;
-      writeJson(res, ready ? 200 : 503, {
-        ready,
-        nucleus,
+    if (req.method === "GET" && req.url === "/mesh/health") {
+      writeJson(res, 200, {
+        status: "ok",
+        nucleus: "N03",
         protocol: "soul-mesh/1",
         contractVersion: "1.1.0",
-        checks: { process: true, meshSecretConfigured }
+        transport: "http",
       });
       return;
     }
 
-    if (req.method === "GET" && req.url === "/mesh/health") {
-      writeJson(res, 200, {
-        status: "ok",
-        nucleus,
+    if (req.method === "GET" && req.url === "/ready") {
+      const secretConfigured = Boolean(process.env.SOUL_MESH_HMAC_SECRET?.trim());
+      const ready = !["production", "staging"].includes(process.env.NODE_ENV ?? "") || secretConfigured;
+      writeJson(res, ready ? 200 : 503, {
+        ready,
+        nucleus: "N03",
         protocol: "soul-mesh/1",
         contractVersion: "1.1.0",
-        transport: "http",
-        uptimeSeconds: Math.floor(process.uptime())
+        checks: { process: true, meshHmacConfigured: secretConfigured },
       });
       return;
     }
 
     if (req.method === "GET" && req.url === "/mesh/discovery") {
-      writeJson(res, 200, discovery());
+      await dispatchToCanonicalHandler(req, res, undefined);
       return;
     }
 
-    if (req.method !== "POST" || req.url !== "/mesh/in") {
-      writeJson(res, 404, { code: "NOT_FOUND" });
+    if (req.url === "/mesh/in" || req.url === "/api/soul-mesh") {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        const e = error as Error & { statusCode?: number };
+        writeJson(res, e.statusCode ?? 400, { error: e.message });
+        return;
+      }
+
+      const mappedReq = { ...req, url: "/api/soul-mesh" } as IncomingMessage;
+      await dispatchToCanonicalHandler(mappedReq, res, body);
       return;
     }
 
-    let value: unknown;
-    try {
-      value = await readJson(req);
-    } catch (error) {
-      const e = error as Error & { statusCode?: number };
-      writeJson(res, e.statusCode ?? 400, { code: e.message });
-      return;
-    }
-
-    if (!isSoulMeshMessage(value)) {
-      writeJson(res, 400, { code: "INVALID_MESH_MESSAGE" });
-      return;
-    }
-
-    if (value.kind !== "request") {
-      writeJson(res, 400, errorFor(value, "REQUEST_REQUIRED"));
-      return;
-    }
-
-    writeJson(res, 404, errorFor(value, "CAPABILITY_HANDLER_NOT_REGISTERED"));
+    writeJson(res, 404, { error: "NOT_FOUND" });
   } catch (error) {
-    writeJson(res, 500, { code: "MESH_INTERNAL_ERROR", detail: error instanceof Error ? error.message : String(error) });
+    if (!res.writableEnded) {
+      writeJson(res, 500, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 });
 
 server.listen(PORT, HOST, () => {
   console.log(JSON.stringify({
     event: "soul.mesh.http.listening",
-    nucleus,
+    nucleus: "N03",
     host: HOST,
     port: PORT,
     health: "/mesh/health",
+    ready: "/ready",
     discovery: "/mesh/discovery",
-    ingress: "/mesh/in"
+    ingress: "/mesh/in",
   }));
 });
-
-function shutdown(signal: string) {
-  console.log(JSON.stringify({ event: "soul.mesh.http.shutdown", signal }));
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 5000).unref();
-}
-
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
