@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "test:pair-fusion": "bun test src/soul-mesh/N03PairFusion.test.ts",
     "preview": "vite preview",
-    "start": "node --experimental-strip-types scripts/soul-mesh-server.ts"
+    "start": "node --experimental-strip-types scripts/soul-mesh-server.ts",
+    "mesh:listener:check": "node scripts/test-soul-mesh-listener.mjs"
   },
   "dependencies": {
     "@google-cloud/speech": "^7.2.0",
