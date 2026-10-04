@@ -70,6 +70,20 @@ function errorFor(message: SoulMeshMessage | undefined, code: string, detail?: s
 
 const server = createServer(async (req, res) => {
   try {
+    if (req.method === "GET" && req.url === "/ready") {
+      const production = process.env.NODE_ENV === "production";
+      const meshSecretConfigured = Boolean(process.env.SOUL_MESH_HMAC_SECRET?.trim());
+      const ready = !production || meshSecretConfigured;
+      writeJson(res, ready ? 200 : 503, {
+        ready,
+        nucleus,
+        protocol: "soul-mesh/1",
+        contractVersion: "1.1.0",
+        checks: { process: true, meshSecretConfigured }
+      });
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/mesh/health") {
       writeJson(res, 200, {
         status: "ok",
