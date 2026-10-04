@@ -22,19 +22,19 @@ try {
       const health = await fetch(base + "/mesh/health");
       if (health.ok) {
         const body = await health.json();
-        if (body.nucleus !== "n03" || body.protocol !== "soul-mesh/1" || body.contractVersion !== "1.1.0") {
+        if (body.nucleus !== "N03" || body.protocol !== "soul-mesh/1" || body.contractVersion !== "1.1.0") {
           throw new Error("health contract mismatch");
         }
         const discovery = await fetch(base + "/mesh/discovery");
         if (!discovery.ok) throw new Error("discovery http " + discovery.status);
         const d = await discovery.json();
-        if (d.nucleus !== "n03" || d.contractVersion !== "1.1.0" || d.transport?.protocol !== "http") {
+        if (d.nucleus !== "N03" || d.contractVersion !== "1.1.0" || d.transport?.protocol !== "http") {
           throw new Error("discovery contract mismatch");
         }
         console.log(JSON.stringify({
           state: "REAL",
           commissionedSurface: false,
-          nucleus: "n03",
+          nucleus: "N03",
           health: "PASS",
           discovery: "PASS",
           note: "Listener is live; capability execution remains a separate commissioning gate."
