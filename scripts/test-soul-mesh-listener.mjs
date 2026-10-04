@@ -25,6 +25,13 @@ try {
         if (body.nucleus !== "N03" || body.protocol !== "soul-mesh/1" || body.contractVersion !== "1.1.0") {
           throw new Error("health contract mismatch");
         }
+        const ready = await fetch(base + "/ready");
+        if (!ready.ok) throw new Error("readiness http " + ready.status);
+        const readiness = await ready.json();
+        if (readiness.nucleus !== "N03" || readiness.ready !== true) {
+          throw new Error("readiness contract mismatch");
+        }
+        console.log(JSON.stringify({ state: "REAL", readiness: "PASS", nucleus: readiness.nucleus }));
         const discovery = await fetch(base + "/mesh/discovery");
         if (!discovery.ok) throw new Error("discovery http " + discovery.status);
         const d = await discovery.json();
