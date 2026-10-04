@@ -24,5 +24,7 @@ jobs:
         run: bun x tsc -p tsconfig.mesh.json --noEmit
       - name: Provider adapter boundary tests
         run: bun test src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/N03AudioCapabilityRegistry.test.ts
+      - name: Soul Mesh listener smoke
+        run: npm run mesh:listener:check
       - name: Build web runtime
         run: bun run build
