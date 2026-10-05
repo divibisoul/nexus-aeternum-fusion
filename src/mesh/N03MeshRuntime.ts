@@ -1,11 +1,17 @@
 import { analyzeEmotion, synthesizeSpeech, summarizeAudio, transcribeAudio, translateAudio, identifySpeakers } from './GeminiAudioAdapter';
 import { N03_AUDIO_CAPABILITIES } from './N03AudioCapabilityRegistry';
 import { SoulMeshRouter } from './SoulMeshRouter';
+import { MESH_PEERS } from './SoulMeshProtocol';
 import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from './WhisperAdapter';
 import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from './KokoroAdapter';
 import { N03_RESIDENT_AGENT } from './N03ResidentAgent';
 
 export const N03_NUCLEUS_ID = 'N03' as const;
+
+const channels = {
+  inChannels: MESH_PEERS.map(peer => `N03.IN.${peer}`),
+  outChannels: MESH_PEERS.map(peer => `N03.OUT.${peer}`),
+};
 
 export const declaredN03Capabilities = () => [
   'mesh.handshake',
@@ -128,6 +134,8 @@ export function createN03MeshRouter(): SoulMeshRouter {
     const agents = router.listAgents();
     return {
       nucleus: N03_NUCLEUS_ID,
+      peers: [...MESH_PEERS],
+      ...channels,
       declaredCapabilities: declaredN03Capabilities(),
       executableCapabilities: [...new Set(agents.flatMap(agent => agent.capabilities))],
       agents,
