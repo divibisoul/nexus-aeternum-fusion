@@ -40,7 +40,7 @@ jobs:
       - name: Pair fusion tests
         run: bun run test:pair-fusion
       - name: Capability runtime tests
-        run: bun run test:capability-runtime
+        run: bun test src/mesh/N03CapabilityRuntime.test.ts
       - name: Emergency diagnostics
         if: failure()
         run: bun scripts/diagnostics.mjs
