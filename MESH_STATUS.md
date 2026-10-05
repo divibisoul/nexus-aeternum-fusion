@@ -13,7 +13,7 @@ N03 is an independent AI nucleus specialized in auditory perception, speech and 
 | Agent layer | 100% | 100% | structural | CLOSED |
 | Capability registry | 100% | 100% | structural | CLOSED |
 | Perception exposer | 100% | 100% | runtime pending | VALIDATION |
-| Audio/speech | 100% declared; 3 handlers wired | 100% wired handlers | provider E2E pending | VALIDATION |
+| Audio/speech | 100% declared; 4 canonical handlers wired | 100% wired handlers | provider/live E2E pending | VALIDATION |
 | Capability discovery | 100% | 100% | runtime pending | VALIDATION |
 | HMAC security boundary | 100% implementation | 100% opt-in by secret | runtime pending | VALIDATION |
 | Resilient HTTP/realtime transport | 100% structural | 100% | runtime pending | VALIDATION |
@@ -21,7 +21,7 @@ N03 is an independent AI nucleus specialized in auditory perception, speech and 
 
 ## N03-owned intelligence
 
-Canonical executable audio capabilities are `audio.transcribe`, `audio.analyze.emotion` and `speech.synthesize`. Additional declared capabilities remain contracts until a real runtime handler is supplied; they are not reported as implemented merely because they are listed.
+Canonical executable audio capabilities include `audio.transcribe`, `audio.analyze.emotion`, `speech.synthesize` and the new `audio.transform`. `N03CapabilityRuntime` owns deterministic PCM16/WAV transformation and delegates document artifacts to N04 `artifact.analyze` with correlation preservation. Additional declared capabilities remain contracts until a real runtime handler is supplied; they are not reported as implemented merely because they are listed.
 
 The existing router and agent registry remain authoritative. The Mesh layer delegates execution to those existing handlers instead of duplicating perception or audio engines.
 
@@ -48,3 +48,7 @@ N03 structural implementation is **100% of the currently defined engineering sco
 - `608dc7d73d253144adf21814250f1d5587feac84` — added HMAC timestamp/nonce verification.
 - `d9f5e101415f7d93619891270ac318f152f4e3a3` — integrated capability discovery and HMAC enforcement.
 - `0f964ad578dccd3cae623b489ef3af7084621663` — completed security/topology environment configuration.
+
+## Lote 3 additive closure — 2026-10-05
+
+`src/mesh/N03CapabilityRuntime.ts` and its tests were added without removing the existing N03 handler path. `audio.transcribe` now has an explicit canonical runtime binding, `audio.transform` has a real local implementation with fail-closed validation, and document artifacts delegate to N04 rather than duplicating document analysis.

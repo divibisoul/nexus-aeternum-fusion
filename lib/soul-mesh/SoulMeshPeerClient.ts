@@ -5,7 +5,7 @@ import {
   type SoulNucleus,
   validateSoulMeshMessage,
 } from './SoulMeshProtocol';
-import { verifySoulMeshHmac } from '@/src/mesh/SoulMeshHmac';
+import { verifySoulMeshHmac } from '../../src/mesh/SoulMeshHmac';
 
 const PEERS: Exclude<SoulNucleus, 'N03'>[] = [
   'N01',

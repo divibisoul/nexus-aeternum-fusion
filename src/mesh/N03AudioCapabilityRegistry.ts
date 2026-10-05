@@ -3,6 +3,7 @@ export type AudioCapability={id:string;status:AudioCapabilityStatus;provider:str
 export const N03_AUDIO_CAPABILITIES:AudioCapability[]=[
 {id:'audio.transcribe',status:'implemented',provider:'Gemini 3.5 Transcribe',description:'Dedicated Gemini speech-to-text with source-language preservation and speaker-turn support.'},
 {id:'speech.synthesize',status:'implemented',provider:'Gemini 3.8 Flash TTS',description:'Text-to-audio through the current Gemini TTS endpoint.'},
+{id:'audio.transform',status:'implemented',provider:'N03 native PCM16/WAV transform + N04 artifact delegation',description:'Deterministic PCM16/WAV normalization or mono conversion; document artifacts delegate to N04 artifact.analyze.'},
 {id:'audio.analyze.emotion',status:'implemented',provider:'Gemini 3.8 Flash audio understanding',description:'Voice emotion analysis through Gemini audio understanding.'},
 {id:'speech.translate',status:'implemented',provider:'Gemini 3.5 Transcribe + Gemini 3.8 Flash',description:'Real transcription followed by target-language translation.'},
 {id:'audio.summarize',status:'implemented',provider:'Gemini 3.8 Flash audio understanding',description:'Substantive audio summarization preserving key facts and temporal references.'},

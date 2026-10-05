@@ -5,6 +5,7 @@ import { MESH_PEERS } from './SoulMeshProtocol';
 import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from './WhisperAdapter';
 import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from './KokoroAdapter';
 import { N03_RESIDENT_AGENT } from './N03ResidentAgent';
+import { N03CapabilityRuntime } from './N03CapabilityRuntime';
 
 export const N03_NUCLEUS_ID = 'N03' as const;
 
@@ -69,6 +70,7 @@ function registerKokoro(router: SoulMeshRouter): void {
 
 export function createN03MeshRouter(): SoulMeshRouter {
   const router = new SoulMeshRouter();
+  const capabilityRuntime = new N03CapabilityRuntime();
 
   router.register('mesh.handshake', message => ({
     nucleus: N03_NUCLEUS_ID,
@@ -159,5 +161,14 @@ export function createN03MeshRouter(): SoulMeshRouter {
 
   registerWhisper(router);
   registerKokoro(router);
+  registerN03CapabilityRuntime(router, capabilityRuntime);
+  return router;
+}
+
+// Additive canonical runtime bindings. The older handlers above remain preserved
+// for compatibility/history; these registrations become the active execution boundary.
+export function registerN03CapabilityRuntime(router: SoulMeshRouter, runtime = new N03CapabilityRuntime()): SoulMeshRouter {
+  router.register('audio.transcribe', message => runtime.execute('audio.transcribe', message.payload));
+  router.register('audio.transform', message => runtime.execute('audio.transform', message.payload));
   return router;
 }
