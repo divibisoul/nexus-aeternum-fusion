@@ -1,4 +1,4 @@
-import { sendFromN03, type N03Peer } from './N03PeerAdapter';
+import type { N03Peer } from './N03PeerAdapter';
 import { SoulMeshPeerClient } from '../../lib/soul-mesh/SoulMeshPeerClient';
 import { transcribeAudio } from './GeminiAudioAdapter';
 
@@ -146,7 +146,7 @@ function transformPcm16Wav(buffer: Buffer, operation: 'normalize-pcm16' | 'mono-
 }
 
 async function executeAudioTransform(input: unknown, client: Pick<SoulMeshPeerClient, 'request'>): Promise<Record<string, unknown>> {
-  const { value, data, mimeType } = audioPayload(input);
+  const value = record(input);
   const artifact = value.artifact;
 
   if (artifact && typeof artifact === 'object' && !Array.isArray(artifact)) {
@@ -171,6 +171,7 @@ async function executeAudioTransform(input: unknown, client: Pick<SoulMeshPeerCl
     }
   }
 
+  const { data, mimeType } = audioPayload(value);
   const operation = value.operation === 'normalize-pcm16' || value.operation === 'mono-pcm16'
     ? value.operation
     : 'identity';
