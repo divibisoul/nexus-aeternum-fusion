@@ -1,11 +1,10 @@
-import { analyzeEmotion, geminiConfigured, synthesizeSpeech, summarizeAudio, transcribeAudio, translateAudio, identifySpeakers } from '../src/mesh/GeminiAudioAdapter';
-import { N03_AUDIO_CAPABILITIES } from '../src/mesh/N03AudioCapabilityRegistry';
-import { SoulMeshRouter } from '../src/mesh/SoulMeshRouter';
+import { geminiConfigured } from '../src/mesh/GeminiAudioAdapter';
+import { createN03MeshRouter, declaredN03Capabilities } from '../src/mesh/N03MeshRuntime';
 import { startN03PeerRegistration } from '../src/mesh/N03PeerRegistration';
 import { MESH_PEERS, SOUL_MESH_CONTRACT_VERSION, validateMessage } from '../src/mesh/SoulMeshProtocol';
 import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from '../src/mesh/SoulMeshHmac';
-import { describeWhisperAdapter, isWhisperAdapterExecutable, transcribeWithWhisper } from '../src/mesh/WhisperAdapter';
-import { describeKokoroAdapter, isKokoroAdapterExecutable, synthesizeWithKokoro } from '../src/mesh/KokoroAdapter';
+import { describeWhisperAdapter } from '../src/mesh/WhisperAdapter';
+import { describeKokoroAdapter } from '../src/mesh/KokoroAdapter';
 import { N03_RESIDENT_AGENT } from '../src/mesh/N03ResidentAgent';
 
 const NUCLEUS_ID = 'N03' as const;
@@ -16,9 +15,9 @@ const REPLAY_WINDOW_MS = 5 * 60_000;
 const SARA_URL = String(process.env.SARA_SERVICE_URL || '').trim().replace(/\/$/, '');
 const SARA_TOKEN = String(process.env.SARA_SERVICE_TOKEN || '').trim();
 const seenRequests = new Map<string, number>();
-const router = new SoulMeshRouter();
+const router = createN03MeshRouter();
 const channels = { inChannels: PEERS.map(p => `N03.IN.${p}`), outChannels: PEERS.map(p => `N03.OUT.${p}`) };
-const declaredCapabilities = () => ['mesh.handshake','mesh.ping','mesh.describe','mesh.resident.describe@1.0.0','capability.list','sara.health','sara.cycle','sara.audit','sara.regenerate','sara.state','sara.capabilities','sara.trace',...N03_AUDIO_CAPABILITIES.map(c=>c.id)];
+const declaredCapabilities = declaredN03Capabilities;
 
 function response(res:any, m:any, capability:string, payload:unknown, status=200){
   const base:any={
@@ -40,7 +39,6 @@ function response(res:any, m:any, capability:string, payload:unknown, status=200
   }
   return res.status(status).json(base);
 }
-function audioInput(payload:any){ if(!payload?.data || !payload?.mimeType) throw new Error('AUDIO_DATA_AND_MIME_TYPE_REQUIRED'); return {data:String(payload.data),mimeType:String(payload.mimeType)}; }
 function acceptOnce(id:string):boolean{const now=Date.now();for(const [key,t] of seenRequests)if(now-t>REPLAY_WINDOW_MS)seenRequests.delete(key);if(seenRequests.has(id))return false;seenRequests.set(id,now);return true;}
 async function callSara(capability:string,payload:unknown,correlationId:string):Promise<unknown>{
   if(!SARA_URL||(capability!=='sara.health'&&!SARA_TOKEN))throw new Error('SARA_SERVICE_NOT_CONFIGURED');
@@ -65,60 +63,6 @@ function meshAuthorized(req:any, message:any):boolean{
   }
   return !secret && !token && process.env.NODE_ENV!=='production';
 }
-
-router.register('mesh.handshake', m => ({ nucleus: NUCLEUS_ID, protocol: 'soul-mesh/1', contractVersion: SOUL_MESH_CONTRACT_VERSION, capabilities: declaredCapabilities(), transports: ['http'], timestamp: Date.now(), echoCorrelationId: m.correlationId }));
-router.register('audio.transcribe', async m => { const a=audioInput(m.payload); return {text:await transcribeAudio(a.data,a.mimeType),provider:'gemini'}; });
-router.register('audio.analyze.emotion', async m => { const a=audioInput(m.payload); return {analysis:await analyzeEmotion(a.data,a.mimeType),provider:'gemini'}; });
-router.register('audio.summarize', async m => { const a=audioInput(m.payload); return {summary:await summarizeAudio(a.data,a.mimeType),provider:'gemini'}; });
-router.register('speech.translate', async m => { const a=audioInput(m.payload); const targetLanguage=String((m.payload as any)?.targetLanguage||'Português do Brasil'); return {...await translateAudio(a.data,a.mimeType,targetLanguage),provider:'gemini'}; });
-router.register('speaker.identify', async m => { const a=audioInput(m.payload); return {transcript:await identifySpeakers(a.data,a.mimeType),provider:'gemini'}; });
-router.register('speech.synthesize', async m => { const text=String((m.payload as any)?.text||''); if(!text) throw new Error('TEXT_REQUIRED'); const audio=await synthesizeSpeech(text,String((m.payload as any)?.voice||'Kore')); return {audio,provider:'gemini'}; });
-router.register('mesh.resident.describe@1.0.0', () => ({ ...N03_RESIDENT_AGENT, whisper: describeWhisperAdapter(), kokoro: describeKokoroAdapter() }));
-if (isWhisperAdapterExecutable()) {
-  router.register('audio.transcribe.whisper@1.0.0', async m => {
-    const a = audioInput(m.payload);
-    return transcribeWithWhisper({
-      data: a.data,
-      mimeType: a.mimeType,
-      language: typeof (m.payload as any)?.language === 'string' ? (m.payload as any).language : undefined,
-      task: (m.payload as any)?.task === 'translate' ? 'translate' : 'transcribe',
-      wordTimestamps: (m.payload as any)?.wordTimestamps === true,
-      initialPrompt: typeof (m.payload as any)?.initialPrompt === 'string' ? (m.payload as any).initialPrompt : undefined,
-    });
-  });
-}
-if (isKokoroAdapterExecutable()) {
-  router.register('speech.synthesize.kokoro@1.0.0', async m => {
-    const text = String((m.payload as any)?.text || '');
-    return synthesizeWithKokoro({
-      text,
-      language: typeof (m.payload as any)?.language === 'string' ? (m.payload as any).language : undefined,
-      voice: typeof (m.payload as any)?.voice === 'string' ? (m.payload as any).voice : undefined,
-      speed: typeof (m.payload as any)?.speed === 'number' ? (m.payload as any).speed : undefined,
-      device: typeof (m.payload as any)?.device === 'string' ? (m.payload as any).device : undefined,
-    });
-  });
-}
-router.register('mesh.ping', m => ({ok:true,handler:'N03.mesh.ping',echoed:m.payload,processedAt:Date.now()}));
-router.register('mesh.describe', () => {
-  const agents = router.listAgents();
-  const executableCapabilities = [...new Set(agents.flatMap(agent => agent.capabilities))];
-  return {
-    nucleus: NUCLEUS_ID,
-    peers: [...PEERS],
-    ...channels,
-    declaredCapabilities: declaredCapabilities(),
-    executableCapabilities,
-    capabilities: declaredCapabilities(),
-    agents,
-    whisper: describeWhisperAdapter(),
-    kokoro: describeKokoroAdapter(),
-    residentAgent: N03_RESIDENT_AGENT,
-    status: 'online',
-    contractVersion: SOUL_MESH_CONTRACT_VERSION,
-  };
-});
-router.register('capability.list', () => ({nucleus:NUCLEUS_ID,capabilities:N03_AUDIO_CAPABILITIES,agents:router.listAgents(),residentAgent:N03_RESIDENT_AGENT,whisper:describeWhisperAdapter(),contractVersion:SOUL_MESH_CONTRACT_VERSION}));
 
 startN03PeerRegistration();
 
