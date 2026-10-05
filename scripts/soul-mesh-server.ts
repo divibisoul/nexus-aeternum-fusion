@@ -1,12 +1,20 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { timingSafeEqual } from "node:crypto";
 import process from "node:process";
 import { createSoulMeshMessage, isSoulMeshMessage, type SoulMeshMessage } from "../lib/soul-mesh/SoulMeshProtocol";
-import { N03_AUDIO_CAPABILITIES } from "../src/mesh/N03AudioCapabilityRegistry";
+import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from "../src/mesh/SoulMeshHmac";
+import { createN03MeshRouter, declaredN03Capabilities } from "../src/mesh/N03MeshRuntime";
 
 const HOST = process.env.SOUL_MESH_HOST ?? "0.0.0.0";
 const PORT = Number(process.env.SOUL_MESH_PORT ?? 3030);
 const MAX_BYTES = Number(process.env.SOUL_MESH_MAX_REQUEST_BYTES ?? 2 * 1024 * 1024);
-const nucleus = "N03" as const;
+const NUCLEUS = "N03" as const;
+const CANONICAL_INGRESS = "/api/soul-mesh";
+const LEGACY_INGRESS = "/mesh/in";
+const MAX_CLOCK_SKEW_MS = 30_000;
+const REPLAY_WINDOW_MS = 5 * 60_000;
+const seenRequests = new Map<string, number>();
+const router = createN03MeshRouter();
 
 function writeJson(res: ServerResponse, status: number, value: unknown) {
   const body = JSON.stringify(value);
@@ -38,34 +46,51 @@ function readJson(req: IncomingMessage): Promise<unknown> {
   });
 }
 
-function discovery() {
-  return {
-    protocol: "soul-mesh/1",
-    contractVersion: "1.1.0",
-    nucleus,
-    status: "AVAILABLE",
-    evidenceState: "PROJECTED",
-    capabilities: N03_AUDIO_CAPABILITIES.map(capability => ({
-      id: capability.id,
-      owner: nucleus,
-      status: capability.status === "implemented" ? "DECLARED" : "DEGRADED",
-      provider: capability.provider,
-      description: capability.description
-    })),
-    transport: { protocol: "http", endpoint: "http://" + HOST + ":" + PORT + "/mesh/in" },
-    runtime: "nexus-aeternum-fusion"
-  };
+function cleanupReplay(now: number): void {
+  for (const [id, seenAt] of seenRequests) {
+    if (now - seenAt > REPLAY_WINDOW_MS) seenRequests.delete(id);
+  }
 }
 
-function errorFor(message: SoulMeshMessage | undefined, code: string, detail?: string) {
+function acceptOnce(id: string): boolean {
+  const now = Date.now();
+  cleanupReplay(now);
+  if (seenRequests.has(id)) return false;
+  seenRequests.set(id, now);
+  return true;
+}
+
+function meshAuthorized(req: IncomingMessage, message: SoulMeshMessage): boolean {
+  const secret = process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if (secret && verifySoulMeshHmac(message, secret)) return true;
+
+  const token = process.env.SOUL_MESH_TOKEN?.trim();
+  const authorization = typeof req.headers.authorization === "string" ? req.headers.authorization.trim() : "";
+  if (token && /^Bearer\s+/i.test(authorization)) {
+    const provided = authorization.replace(/^Bearer\s+/i, "").trim();
+    const expected = Buffer.from(token);
+    const actual = Buffer.from(provided);
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
+
+  return !secret && !token && process.env.NODE_ENV !== "production";
+}
+
+function responseMessage(request: SoulMeshMessage, payload: unknown, kind: "response" | "error" = "response") {
+  const secret = process.env.SOUL_MESH_HMAC_SECRET?.trim();
+  if (secret) return signSoulMeshLegacyResponse(request, payload, kind, secret);
   return createSoulMeshMessage({
-    source: nucleus,
-    target: message?.source ?? "N01",
-    kind: "error",
-    capability: message?.capability,
-    correlationId: message?.correlationId ?? crypto.randomUUID(),
-    payload: { code, ...(detail ? { detail } : {}) }
+    source: request.target,
+    target: request.source,
+    kind,
+    capability: request.capability,
+    correlationId: request.correlationId,
+    payload,
   });
+}
+
+function respond(res: ServerResponse, request: SoulMeshMessage, payload: unknown, status = 200) {
+  writeJson(res, status, responseMessage(request, payload, status >= 400 ? "error" : "response"));
 }
 
 const server = createServer(async (req, res) => {
@@ -73,13 +98,19 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && req.url === "/ready") {
       const production = process.env.NODE_ENV === "production";
       const meshSecretConfigured = Boolean(process.env.SOUL_MESH_HMAC_SECRET?.trim());
-      const ready = !production || meshSecretConfigured;
+      const tokenConfigured = Boolean(process.env.SOUL_MESH_TOKEN?.trim());
+      const ready = !production || meshSecretConfigured || tokenConfigured;
       writeJson(res, ready ? 200 : 503, {
         ready,
-        nucleus,
+        nucleus: NUCLEUS,
         protocol: "soul-mesh/1",
         contractVersion: "1.1.0",
-        checks: { process: true, meshSecretConfigured }
+        checks: {
+          process: true,
+          authConfigured: meshSecretConfigured || tokenConfigured,
+          canonicalIngress: CANONICAL_INGRESS,
+          handlers: router.listAgents().length,
+        },
       });
       return;
     }
@@ -87,21 +118,38 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && req.url === "/mesh/health") {
       writeJson(res, 200, {
         status: "ok",
-        nucleus,
+        nucleus: NUCLEUS,
         protocol: "soul-mesh/1",
         contractVersion: "1.1.0",
         transport: "http",
-        uptimeSeconds: Math.floor(process.uptime())
+        uptimeSeconds: Math.floor(process.uptime()),
+        canonicalIngress: CANONICAL_INGRESS,
+        executableCapabilities: [...new Set(router.listAgents().flatMap(agent => agent.capabilities))],
       });
       return;
     }
 
     if (req.method === "GET" && req.url === "/mesh/discovery") {
-      writeJson(res, 200, discovery());
+      writeJson(res, 200, {
+        protocol: "soul-mesh/1",
+        contractVersion: "1.1.0",
+        nucleus: NUCLEUS,
+        status: "AVAILABLE",
+        evidenceState: "STRUCTURAL",
+        capabilities: declaredN03Capabilities(),
+        executableCapabilities: [...new Set(router.listAgents().flatMap(agent => agent.capabilities))],
+        transport: {
+          protocol: "http",
+          endpoint: "http://" + HOST + ":" + PORT + CANONICAL_INGRESS,
+          legacyEndpoint: "http://" + HOST + ":" + PORT + LEGACY_INGRESS,
+        },
+        runtime: "nexus-aeternum-fusion",
+      });
       return;
     }
 
-    if (req.method !== "POST" || req.url !== "/mesh/in") {
+    const isIngress = req.method === "POST" && (req.url === CANONICAL_INGRESS || req.url === LEGACY_INGRESS);
+    if (!isIngress) {
       writeJson(res, 404, { code: "NOT_FOUND" });
       return;
     }
@@ -120,26 +168,53 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    if (value.kind !== "request") {
-      writeJson(res, 400, errorFor(value, "REQUEST_REQUIRED"));
+    if (value.target !== NUCLEUS) {
+      respond(res, value, { code: "INVALID_TARGET", target: value.target }, 400);
       return;
     }
 
-    writeJson(res, 404, errorFor(value, "CAPABILITY_HANDLER_NOT_REGISTERED"));
+    if (!meshAuthorized(req, value)) {
+      respond(res, value, { code: "UNAUTHORIZED" }, 401);
+      return;
+    }
+
+    if (value.kind !== "request") {
+      respond(res, value, { code: "REQUEST_REQUIRED" }, 400);
+      return;
+    }
+
+    if (!acceptOnce(value.id)) {
+      respond(res, value, { code: "REPLAY_DETECTED" }, 409);
+      return;
+    }
+
+    try {
+      const payload = await router.dispatch(value);
+      respond(res, value, payload, 200);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : String(error);
+      const status = code.startsWith("CAPABILITY_HANDLER_NOT_REGISTERED") ? 501 : 502;
+      respond(res, value, { code, nucleus: NUCLEUS }, status);
+    }
   } catch (error) {
-    writeJson(res, 500, { code: "MESH_INTERNAL_ERROR", detail: error instanceof Error ? error.message : String(error) });
+    writeJson(res, 500, {
+      code: "MESH_INTERNAL_ERROR",
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
 server.listen(PORT, HOST, () => {
   console.log(JSON.stringify({
     event: "soul.mesh.http.listening",
-    nucleus,
+    nucleus: NUCLEUS,
     host: HOST,
     port: PORT,
     health: "/mesh/health",
     discovery: "/mesh/discovery",
-    ingress: "/mesh/in"
+    ingress: CANONICAL_INGRESS,
+    legacyIngress: LEGACY_INGRESS,
+    capabilityCount: declaredN03Capabilities().length,
   }));
 });
 
