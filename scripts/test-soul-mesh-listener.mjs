@@ -22,14 +22,37 @@ try {
       const health = await fetch(base + "/mesh/health");
       if (health.ok) {
         const body = await health.json();
-        if (body.nucleus !== "n03" || body.protocol !== "soul-mesh/1" || body.contractVersion !== "1.1.0") {
+        if (body.nucleus !== "N03" || body.protocol !== "soul-mesh/1" || body.contractVersion !== "1.1.0") {
           throw new Error("health contract mismatch");
         }
         const discovery = await fetch(base + "/mesh/discovery");
         if (!discovery.ok) throw new Error("discovery http " + discovery.status);
         const d = await discovery.json();
-        if (d.nucleus !== "n03" || d.contractVersion !== "1.1.0" || d.transport?.protocol !== "http") {
+        if (d.nucleus !== "N03" || d.contractVersion !== "1.1.0" || d.transport?.protocol !== "http") {
           throw new Error("discovery contract mismatch");
+        }
+        const id = crypto.randomUUID();
+        const request = {
+          protocol: "soul-mesh/1",
+          contractVersion: "1.1.0",
+          id,
+          correlationId: "smoke-" + id,
+          source: "N07",
+          target: "N03",
+          kind: "request",
+          capability: "mesh.ping",
+          payload: { smoke: true },
+          timestamp: Date.now()
+        };
+        const execResponse = await fetch(base + "/api/soul-mesh", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(request)
+        });
+        if (!execResponse.ok) throw new Error("canonical ingress http " + execResponse.status);
+        const execBody = await execResponse.json();
+        if (execBody.kind !== "response" || execBody.source !== "N03" || execBody.target !== "N07" || execBody.correlationId !== request.correlationId || execBody.payload?.ok !== true) {
+          throw new Error("canonical execution contract mismatch");
         }
         console.log(JSON.stringify({
           state: "REAL",
@@ -37,7 +60,9 @@ try {
           nucleus: "n03",
           health: "PASS",
           discovery: "PASS",
-          note: "Listener is live; capability execution remains a separate commissioning gate."
+          execution: "PASS",
+          canonicalIngress: "/api/soul-mesh",
+          note: "Standalone listener, canonical ingress and mesh.ping execution are live in the test environment."
         }));
         stop();
         process.exit(0);
