@@ -1,13 +1,89 @@
-export type NucleusId='N01'|'N02'|'N03'|'N04'|'N05'|'N06';
-export type MeshKind='request'|'response'|'event'|'error';
-export type MeshMessage={protocol:'soul-mesh/1';id:string;correlationId:string;source:NucleusId;target:NucleusId;kind:MeshKind;capability:string;payload:unknown;timestamp:number};
-const PEERS:Exclude<NucleusId,'N03'>[]=['N01','N02','N04','N05','N06'];
-const env=(globalThis as any).process?.env??{}; const urls:Partial<Record<NucleusId,string>>={N01:env.SOUL_MESH_N01_URL,N02:env.SOUL_MESH_N02_URL,N04:env.SOUL_MESH_N04_URL,N05:env.SOUL_MESH_N05_URL,N06:env.SOUL_MESH_N06_URL};
-const tokens:Partial<Record<NucleusId,string>>={N01:env.SOUL_MESH_N01_TOKEN,N02:env.SOUL_MESH_N02_TOKEN,N04:env.SOUL_MESH_N04_TOKEN,N05:env.SOUL_MESH_N05_TOKEN,N06:env.SOUL_MESH_N06_TOKEN};
-const uuid=()=>globalThis.crypto?.randomUUID?.()??`${Date.now()}-${Math.random()}`;
-const valid=(x:unknown):x is MeshMessage=>{if(!x||typeof x!=='object')return false;const m=x as Record<string,unknown>;return m.protocol==='soul-mesh/1'&&typeof m.id==='string'&&typeof m.correlationId==='string'&&typeof m.source==='string'&&typeof m.target==='string'&&typeof m.kind==='string'&&typeof m.capability==='string'&&typeof m.timestamp==='number'};
-async function request(target:NucleusId,capability:string,payload:unknown,timeoutMs=15000,retries=1):Promise<MeshMessage>{const url=urls[target];if(!url)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);const correlationId=uuid();const message:MeshMessage={protocol:'soul-mesh/1',id:uuid(),correlationId,source:'N03',target,kind:'request',capability,payload,timestamp:Date.now()};let last:unknown;for(let attempt=0;attempt<=Math.min(3,retries);attempt++){const c=new AbortController();const t=setTimeout(()=>c.abort(),timeoutMs);try{const headers:Record<string,string>={'content-type':'application/json','accept':'application/json'};if(tokens[target])headers.authorization=`Bearer ${tokens[target]}`;const r=await fetch(url,{method:'POST',headers,body:JSON.stringify(message),signal:c.signal});const b:unknown=await r.json().catch(()=>null);if(!valid(b)||b.correlationId!==correlationId||b.source!==target||b.target!=='N03')throw new Error('SOUL_MESH_INVALID_RESPONSE');if(!r.ok||b.kind==='error')throw new Error(`SOUL_MESH_REMOTE_ERROR:${target}:${b.capability}`);return b}catch(e){last=e;if(attempt<Math.min(3,retries))await new Promise(r=>setTimeout(r,250*(attempt+1)))}finally{clearTimeout(t)}}throw last instanceof Error?last:new Error(String(last))}
-export const sendTo=request; export const requestPeerCapability=request;
-export const describePeer=(target:NucleusId,timeoutMs=10000)=>request(target,'mesh.describe',{from:'N03',intent:'capability-discovery'},timeoutMs,1);
-export async function pingAll(timeoutMs=5000){return Promise.all(PEERS.map(async target=>{try{return{target,status:'CONNECTED' as const,response:await request(target,'mesh.ping',{from:'N03',channel:`N03.OUT.${target}`},timeoutMs,1)}}catch(error){return{target,status:'FAILED' as const,error:String(error)}}}))};
-export const N03_OUT_CHANNELS=PEERS.map(x=>`N03.OUT.${x}`); export const N03_IN_CHANNELS=PEERS.map(x=>`N03.IN.${x}`);
+import { randomUUID } from 'node:crypto';
+import {
+  SoulMeshPeerClient,
+  type SuperGPUTask,
+} from './SoulMeshPeerClient';
+
+export type NucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'N07';
+export type MeshKind = 'request' | 'response' | 'event' | 'error';
+export type MeshMessage = {
+  protocol: 'soul-mesh/1';
+  contractVersion: '1.1.0';
+  id: string;
+  correlationId: string;
+  source: NucleusId;
+  target: NucleusId;
+  kind: MeshKind;
+  capability: string;
+  payload: unknown;
+  timestamp: number;
+  nonce?: string;
+  hmac?: string;
+  meta?: Record<string, unknown>;
+};
+
+/**
+ * Legacy compatibility surface.
+ * The previous standalone N03 peer implementation is preserved as an alias
+ * over the canonical SoulMeshPeerClient so N03 has one runtime Mesh path.
+ */
+const client = new SoulMeshPeerClient('N03');
+
+export const sendTo = async (
+  target: Exclude<NucleusId, 'N03'>,
+  capability: string,
+  payload: unknown,
+  timeoutMs = 15000,
+  _retries = 1,
+): Promise<MeshMessage> => {
+  void _retries;
+  const result = await client.request(target, capability, payload);
+  return result as MeshMessage;
+};
+
+export const requestPeerCapability = sendTo;
+
+export const describePeer = async (
+  target: Exclude<NucleusId, 'N03'>,
+  timeoutMs = 10000,
+) => {
+  void timeoutMs;
+  return client.describe(target);
+};
+
+export const requestPeerTool = async (
+  target: Exclude<NucleusId, 'N03'>,
+  toolCapability: string,
+  payload: unknown,
+  timeoutMs = 15000,
+) => {
+  void timeoutMs;
+  return sendTo(target, toolCapability, payload);
+};
+
+export const executePublicCapability = (
+  provider:
+    | 'bijux-dag-runtime' | 'ouro-loop' | 'recuris' | 'fedml' | 'hivemind'
+    | 'temporal' | 'hora-graph-core' | 'cognitive-workspace' | 'ravana' | 'ray' | 'nats-go',
+  operation: string,
+  payload: unknown,
+  correlationId = randomUUID(),
+) => client.executePublicCapability(provider, operation, payload, correlationId);
+
+export async function pingAll(timeoutMs = 5000) {
+  void timeoutMs;
+  const peers: Exclude<NucleusId, 'N03'>[] = ['N01', 'N02', 'N04', 'N05', 'N06', 'N07'];
+  return Promise.all(
+    peers.map(async target => {
+      try {
+        return { target, status: 'CONNECTED' as const, response: await client.ping(target) };
+      } catch (error) {
+        return { target, status: 'FAILED' as const, error: String(error) };
+      }
+    }),
+  );
+}
+
+export const N03_OUT_CHANNELS = ['N03.OUT.N01','N03.OUT.N02','N03.OUT.N04','N03.OUT.N05','N03.OUT.N06','N03.OUT.N07'];
+export const N03_IN_CHANNELS = ['N03.IN.N01','N03.IN.N02','N03.IN.N04','N03.IN.N05','N03.IN.N06','N03.IN.N07'];
+export type { SuperGPUTask };
