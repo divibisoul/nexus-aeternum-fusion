@@ -90,3 +90,36 @@ test('N03 document artifact delegation does not require an audio payload', async
   assert.equal(called, true);
   assert.equal(result.mode, 'delegated-document-artifact');
 });
+
+test('N03 runtime dispatches implemented audio capabilities through the real Gemini adapter boundary', async () => {
+  const previousFetch = globalThis.fetch;
+  const previousKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = 'test-runtime-key';
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.stringify({
+      candidates: [{ content: { parts: [{ text: init?.body && String(init.body).includes('Translate') ? 'translated' : 'analysis' }] } }],
+    });
+    return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const runtime = new N03CapabilityRuntime({ peerClient: { request: async () => { throw new Error('unexpected'); } } });
+    const audio = { mimeType: 'audio/wav', data: Buffer.from('RIFF-test').toString('base64'), correlationId: 'corr-n03-audio-coverage' };
+
+    const emotion = await runtime.execute('audio.analyze.emotion', audio) as Record<string, unknown>;
+    const summary = await runtime.execute('audio.summarize', audio) as Record<string, unknown>;
+    const translation = await runtime.execute('speech.translate', { ...audio, targetLanguage: 'English' }) as Record<string, unknown>;
+    const speakers = await runtime.execute('speaker.identify', audio) as Record<string, unknown>;
+    const synthesis = await runtime.execute('speech.synthesize', { text: 'hello', voice: 'Kore', correlationId: audio.correlationId }) as Record<string, unknown>;
+
+    assert.equal(emotion.provider, 'gemini');
+    assert.equal(summary.provider, 'gemini');
+    assert.equal(translation.provider, 'gemini');
+    assert.equal(speakers.provider, 'gemini');
+    assert.equal(synthesis.provider, 'gemini');
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previousKey;
+  }
+});

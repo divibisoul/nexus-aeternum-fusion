@@ -130,6 +130,25 @@ export class SoulMeshPeerClient {
     return body;
   }
 
+  async executePublicCapability(
+    provider:
+      | 'bijux-dag-runtime' | 'ouro-loop' | 'recuris' | 'fedml' | 'hivemind'
+      | 'temporal' | 'hora-graph-core' | 'cognitive-workspace' | 'ravana' | 'ray' | 'nats-go',
+    operation: string,
+    payload: unknown,
+    correlationId = randomUUID(),
+  ) {
+    const normalizedOperation = operation.trim();
+    if (!normalizedOperation) throw new Error('PUBLIC_CAPABILITY_OPERATION_REQUIRED');
+    const response = await this.request(
+      'N07',
+      `external.${provider}.execute@1.0.0`,
+      { payload, metadata: { provider, external_operation: normalizedOperation } },
+      correlationId,
+    );
+    return { correlationId, payload: response.payload };
+  }
+
   async superGPUExecute(values: number[], operation = 'identity', device?: string, correlationId = randomUUID()) {
     if (!Array.isArray(values) || values.length === 0 || values.some(value => !Number.isFinite(value))) {
       throw new Error('SUPERGPU_VALUES_INVALID');
