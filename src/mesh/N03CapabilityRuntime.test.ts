@@ -91,14 +91,19 @@ test('N03 document artifact delegation does not require an audio payload', async
   assert.equal(result.mode, 'delegated-document-artifact');
 });
 
-test('N03 runtime dispatches implemented audio capabilities through the real Gemini adapter boundary', async () => {
+test('N03 dispatches implemented audio capabilities through the Gemini adapter using a contract-valid unit fixture', async () => {
   const previousFetch = globalThis.fetch;
   const previousKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = 'test-runtime-key';
   globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-    const body = JSON.stringify({
-      candidates: [{ content: { parts: [{ text: init?.body && String(init.body).includes('Translate') ? 'translated' : 'analysis' }] } }],
-    });
+    const requestBody = JSON.parse(String(init?.body ?? '{}')) as {
+      generationConfig?: { responseModalities?: string[] };
+    };
+    const requestsAudio = requestBody.generationConfig?.responseModalities?.includes('AUDIO') ?? false;
+    const parts = requestsAudio
+      ? [{ inlineData: { mimeType: 'audio/wav', data: Buffer.from('unit-test-audio-fixture').toString('base64') } }]
+      : [{ text: init?.body && String(init.body).includes('Translate') ? 'translated' : 'analysis' }];
+    const body = JSON.stringify({ candidates: [{ content: { parts } }] });
     return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } });
   }) as typeof fetch;
 
