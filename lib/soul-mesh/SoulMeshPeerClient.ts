@@ -1,11 +1,11 @@
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import {
   createSoulMeshMessage,
   type SoulMeshMessage,
   type SoulNucleus,
   validateSoulMeshMessage,
 } from './SoulMeshProtocol';
-import { verifySoulMeshHmac } from '../../src/mesh/SoulMeshHmac';
+import { signSoulMeshMessage, verifySoulMeshHmac } from '../../src/mesh/SoulMeshHmac';
 
 const PEERS: Exclude<SoulNucleus, 'N03'>[] = [
   'N01',
@@ -24,23 +24,6 @@ function nonce() {
   return randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
 }
 
-function canonical(message: SoulMeshMessage, nonceValue: string): string {
-  return JSON.stringify({
-    protocol: message.protocol,
-    contractVersion: message.contractVersion,
-    id: message.id,
-    correlationId: message.correlationId,
-    source: message.source,
-    target: message.target,
-    kind: message.kind,
-    capability: message.capability ?? '',
-    payload: message.payload,
-    timestamp: message.timestamp,
-    transport: message.meta?.transport,
-    meta: message.meta ?? null,
-    nonce: nonceValue,
-  });
-}
 
 export class SoulMeshPeerClient {
   constructor(private readonly source: SoulNucleus = 'N03') {}
@@ -92,13 +75,19 @@ export class SoulMeshPeerClient {
     };
 
     const hmacSecret = secret();
+    const bearerToken = process.env.SOUL_MESH_TOKEN?.trim() ?? '';
     if (hmacSecret) {
-      headers['x-soul-mesh-nonce'] = nonceValue;
-      headers['x-soul-mesh-hmac'] = createHmac('sha256', hmacSecret)
-        .update(canonical(message, nonceValue), 'utf8')
-        .digest('hex');
-    } else if (process.env.SOUL_MESH_TOKEN) {
-      headers.authorization = `Bearer ${process.env.SOUL_MESH_TOKEN}`;
+      if (Buffer.byteLength(hmacSecret, 'utf8') < 32) throw new Error('SOUL_MESH_HMAC_SECRET_TOO_SHORT');
+      const signed = signSoulMeshMessage(message, hmacSecret);
+      message.nonce = signed.nonce;
+      message.hmac = signed.hmac;
+      message.meta = signed.meta;
+      headers['x-soul-mesh-nonce'] = signed.nonce;
+      headers['x-soul-mesh-hmac'] = signed.hmac;
+    } else if (bearerToken) {
+      headers.authorization = `Bearer ${bearerToken}`;
+    } else if (process.env.NODE_ENV === 'production') {
+      throw new Error(`SOUL_MESH_AUTH_NOT_CONFIGURED:${target}`);
     }
 
     const response = await fetch(endpoint, {
