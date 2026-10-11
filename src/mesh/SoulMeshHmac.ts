@@ -1,4 +1,8 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+
+function assertHmacSecret(secret: string): void {
+  if (Buffer.byteLength(secret, 'utf8') < 32) throw new Error('SOUL_MESH_HMAC_SECRET_TOO_SHORT');
+}
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -29,6 +33,7 @@ function canonicalModernWithMeta(message: WireMessage, nonceValue: string): stri
     capability: message.capability ?? null,
     payload: message.payload,
     timestamp: message.timestamp,
+    transport: message.meta?.transport,
     meta: message.meta ?? null,
     nonce: nonceValue,
   });
@@ -80,7 +85,9 @@ function signaturesFor(message: WireMessage, secret: string, nonceValue: string)
 
 export function signSoulMeshMessage(message: SoulMeshMessage, secret: string): SoulMeshMessage & { nonce: string; hmac: string } {
   if (!secret) throw new Error('SOUL_MESH_HMAC_SECRET_REQUIRED');
-  const signed = { ...message, nonce: crypto.randomUUID() } as WireMessage;
+  assertHmacSecret(secret);
+  const nonceValue = nonceOf(message) || randomUUID();
+  const signed = { ...message, nonce: nonceValue, meta: { ...(message.meta ?? {}), nonce: message.meta?.nonce ?? nonceValue } } as WireMessage;
   const canonical = canonicalModernWithMeta(signed, signed.nonce);
   return { ...signed, hmac: createHmac('sha256', secret).update(canonical).digest('hex') };
 }
@@ -92,16 +99,17 @@ export function signSoulMeshLegacyResponse(
   secret: string,
 ): SoulMeshMessage & { nonce: string; hmac: string } {
   if (!secret) throw new Error('SOUL_MESH_HMAC_SECRET_REQUIRED');
+  assertHmacSecret(secret);
   const message: WireMessage = {
     ...request,
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     source: request.target,
     target: request.source,
     kind,
     payload,
     timestamp: Date.now(),
   };
-  const nonceValue = crypto.randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
+  const nonceValue = randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
   const hmac = createHmac('sha256', secret)
     .update(canonicalLegacy(message, nonceValue), 'utf8')
     .digest('hex');
@@ -110,7 +118,7 @@ export function signSoulMeshLegacyResponse(
 
 export function verifySoulMeshHmac(message: SoulMeshMessage, secret: string, now = Date.now()): boolean {
   const wire = message as WireMessage;
-  if (!secret) return false;
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32) return false;
   const nonce = nonceOf(wire);
   const supplied = String(wire.hmac ?? '').trim();
   if (!nonce || !supplied || !/^[0-9a-f]{64}$/i.test(supplied)) return false;
