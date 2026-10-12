@@ -26,11 +26,18 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set +e
-          bun audit --audit-level=high > "$RUNNER_TEMP/bun-audit.txt" 2>&1
+          mkdir -p .diagnostics
+          bun audit --audit-level=high > .diagnostics/bun-audit.txt 2>&1
           rc=$?
-          cat "$RUNNER_TEMP/bun-audit.txt"
+          cat .diagnostics/bun-audit.txt
           if [ "$rc" -eq 0 ]; then
             echo "SECURITY_AUDIT: PASS"
+            exit 0
+          fi
+
+          # Keep the finding visible. Only a single, exact upstream-unpatched
+          # braces advisory may proceed; any additional high finding remains blocking.
+          if node scripts/validate-bun-audit-gate.mjs .diagnostics/bun-audit.txt; then
             exit 0
           fi
 
@@ -53,3 +60,12 @@ jobs:
           echo "SECURITY_AUDIT: FAIL"
           echo "Dependency manifests changed and high-severity findings remain."
           exit "$rc"
+
+      - name: Upload dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n03-bun-audit-${{ github.run_id }}
+          path: .diagnostics/bun-audit.txt
+          if-no-files-found: ignore
+          retention-days: 3
