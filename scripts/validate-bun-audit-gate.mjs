@@ -2,8 +2,10 @@
 import fs from 'node:fs';
 
 const path = process.argv[2] ?? '.diagnostics/bun-audit.txt';
-const report = fs.readFileSync(path, 'utf8');
-const summary = report.match(/\b\d+\s+vulnerabilities?\s+\((\d+)\s+high\)/i);
+const raw = fs.readFileSync(path, 'utf8');
+// Bun audit may include terminal colour escapes; strip them before matching evidence.
+const report = raw.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '');
+const summary = report.match(/\b\d+\s+vulnerabilit(?:y|ies)\s+\((\d+)\s+high\)/i);
 const highCount = summary ? Number(summary[1]) : Number.NaN;
 
 const exactUnpatchedBraces =
@@ -26,4 +28,5 @@ if (highCount === 1 && exactUnpatchedBraces && !sourceMapHigh) {
 console.error('SECURITY_AUDIT: UNRESOLVED_ACTIONABLE_FINDING');
 console.error('Only the exact, single upstream-unpatched braces advisory can use this narrow gate.');
 console.error('Any additional high finding—including source-map-js—must fail validation.');
+console.error(`Observed high findings: ${Number.isFinite(highCount) ? highCount : 'unparseable'}`);
 process.exit(1);
