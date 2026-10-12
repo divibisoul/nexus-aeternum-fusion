@@ -37,6 +37,8 @@ jobs:
         run: bun run lint
       - name: Typecheck
         run: bun run typecheck
+      - name: Mesh HMAC contract tests
+        run: bun run mesh:hmac:unit
       - name: Pair fusion tests
         run: bun run test:pair-fusion
       - name: Capability runtime tests
