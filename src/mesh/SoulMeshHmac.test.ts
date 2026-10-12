@@ -109,3 +109,26 @@ test('N03 canonical HMAC includes transport projection required by N07 1.1.0', (
   assert.equal(signed.hmac, expected);
   assert.equal(verifySoulMeshHmac(signed, secret), true);
 });
+
+test('N03 rejects signed envelopes outside shared 30-second Mesh clock skew', () => {
+  const secret = '01234567890123456789012345678901';
+  const base = {
+    protocol: 'soul-mesh/1' as const,
+    contractVersion: '1.1.0' as const,
+    id: 'n03-clock-skew',
+    correlationId: 'n03-clock-skew-correlation',
+    source: 'N02' as const,
+    target: 'N03' as const,
+    kind: 'request' as const,
+    capability: 'audio.transcribe',
+    payload: { value: 'clock-skew-regression' },
+  };
+
+  for (const offsetMs of [-30_001, 30_001]) {
+    const signed = signSoulMeshMessage(
+      { ...base, id: `n03-clock-skew-${offsetMs}`, timestamp: Date.now() + offsetMs },
+      secret,
+    );
+    assert.equal(verifySoulMeshHmac(signed, secret), false);
+  }
+});
