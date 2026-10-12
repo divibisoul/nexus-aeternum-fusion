@@ -5,7 +5,7 @@ function assertHmacSecret(secret: string): void {
 }
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 
-const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const MAX_CLOCK_SKEW_MS = 30_000;
 const usedNonces = new Map<string, number>();
 
 type WireMessage = SoulMeshMessage & {
