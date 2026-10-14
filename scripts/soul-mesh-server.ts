@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import process from "node:process";
-import { createSoulMeshMessage, isSoulMeshMessage, type SoulMeshMessage } from "../lib/soul-mesh/SoulMeshProtocol";
+import { createSoulMeshMessage, isSoulMeshMessage, type SoulMeshMessage } from "../lib/soul-mesh/SoulMeshProtocol.ts";
 import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from "../src/mesh/SoulMeshHmac";
 import { createN03MeshRouter, declaredN03Capabilities } from "../src/mesh/N03MeshRuntime";
 

@@ -1,6 +1,13 @@
 import type { N03Peer } from './N03PeerAdapter';
 import { SoulMeshPeerClient } from '../../lib/soul-mesh/SoulMeshPeerClient';
-import { transcribeAudio } from './GeminiAudioAdapter';
+import {
+  analyzeEmotion,
+  identifySpeakers,
+  summarizeAudio,
+  synthesizeSpeech,
+  transcribeAudio,
+  translateAudio,
+} from './GeminiAudioAdapter';
 
 export type N03ArtifactInput = {
   artifact?: unknown;
@@ -229,6 +236,55 @@ export class N03CapabilityRuntime {
       }
       case 'audio.transform':
         return executeAudioTransform(payload, this.peerClient);
+      case 'audio.analyze.emotion': {
+        const { data, mimeType } = audioPayload(payload);
+        return {
+          analysis: await analyzeEmotion(data, mimeType),
+          provider: 'gemini',
+          correlationId: record(payload).correlationId ?? null,
+        };
+      }
+      case 'audio.summarize': {
+        const { data, mimeType } = audioPayload(payload);
+        return {
+          summary: await summarizeAudio(data, mimeType),
+          provider: 'gemini',
+          correlationId: record(payload).correlationId ?? null,
+        };
+      }
+      case 'speech.translate': {
+        const { value, data, mimeType } = audioPayload(payload);
+        const translated = await translateAudio(
+          data,
+          mimeType,
+          typeof value.targetLanguage === 'string' ? value.targetLanguage : 'Português do Brasil',
+        );
+        return {
+          ...translated,
+          provider: 'gemini',
+          correlationId: value.correlationId ?? null,
+        };
+      }
+      case 'speaker.identify': {
+        const { value, data, mimeType } = audioPayload(payload);
+        return {
+          transcript: await identifySpeakers(data, mimeType),
+          provider: 'gemini',
+          diarization: true,
+          correlationId: value.correlationId ?? null,
+        };
+      }
+      case 'speech.synthesize': {
+        const value = record(payload);
+        const text = typeof value.text === 'string' ? value.text : '';
+        const voice = typeof value.voice === 'string' ? value.voice : 'Kore';
+        const synthesized = await synthesizeSpeech(text, voice);
+        return {
+          ...synthesized,
+          provider: 'gemini',
+          correlationId: value.correlationId ?? null,
+        };
+      }
       default:
         throw new Error(`N03_CAPABILITY_NOT_EXECUTABLE:${capability}`);
     }
