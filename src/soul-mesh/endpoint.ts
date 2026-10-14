@@ -1,52 +1,74 @@
-export const SOUL_MESH_PROTOCOL = 'soul-mesh/1' as const;
-export const SOUL_MESH_CONTRACT_VERSION = '1.1.0' as const;
-export const SOUL_NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'] as const;
-export type NucleusId = typeof SOUL_NUCLEI[number];
-export type SoulMeshKind = 'request' | 'response' | 'event' | 'error';
-export type SoulMeshMessage = {
-  protocol: typeof SOUL_MESH_PROTOCOL;
-  contractVersion: typeof SOUL_MESH_CONTRACT_VERSION;
-  id: string;
-  correlationId: string;
-  source: NucleusId;
-  target: NucleusId;
-  kind: SoulMeshKind;
-  capability?: string;
-  payload: unknown;
-  timestamp: number;
-  meta?: { runtime?: string; transport?: string; encoding?: string; version?: string; nonce?: string; traceId?: string };
-};
+/** @deprecated Compatibility facade. Canonical Mesh envelope/types live in lib/soul-mesh/SoulMeshProtocol.ts. */
+import {
+  SOUL_MESH_PROTOCOL,
+  SOUL_MESH_CONTRACT_VERSION,
+  SOUL_NUCLEI,
+  createSoulMeshMessage,
+  validateSoulMeshMessage,
+  isSoulMeshMessage,
+  type SoulNucleus,
+  type SoulMeshKind,
+  type SoulMeshMessage,
+} from '../../lib/soul-mesh/SoulMeshProtocol';
 
-export function validateMessage(m: SoulMeshMessage, nucleusId: NucleusId) {
-  if (
-    m.protocol !== SOUL_MESH_PROTOCOL
-    || m.contractVersion !== SOUL_MESH_CONTRACT_VERSION
-    || m.target !== nucleusId
-    || m.source === m.target
-    || !m.id
-    || !m.correlationId
-    || !Number.isFinite(m.timestamp)
-    || Math.abs(Date.now() - m.timestamp) > 30_000
-    || !m.capability
-    || !['request', 'response', 'event', 'error'].includes(m.kind)
-  ) {
-    throw new Error('Invalid Mesh message');
-  }
+export { SOUL_MESH_PROTOCOL, SOUL_MESH_CONTRACT_VERSION, SOUL_NUCLEI, createSoulMeshMessage, validateSoulMeshMessage, isSoulMeshMessage };
+export type { SoulNucleus, SoulMeshKind, SoulMeshMessage };
+export type NucleusId = SoulNucleus;
+
+export const NUCLEUS_ID = 'N03' as const;
+export const MESH_PEERS = ['N01', 'N02', 'N04', 'N05', 'N06', 'N07'] as const;
+export const createMessage = createSoulMeshMessage;
+
+export function validateMessage(message: unknown, nucleusId: NucleusId): message is SoulMeshMessage {
+  if (!isSoulMeshMessage(message)) throw new Error('Invalid Mesh message');
+  validateSoulMeshMessage(message);
+  if (message.target !== nucleusId) throw new Error('Invalid Mesh target');
   return true;
 }
 
 export async function handleMeshMessage(
-  m: SoulMeshMessage,
+  message: SoulMeshMessage,
   nucleusId: NucleusId,
-  handlers: Record<string, (p: unknown) => Promise<unknown> | unknown>,
-) {
-  validateMessage(m, nucleusId);
-  if (m.kind !== 'request') return m;
-  const h = m.capability ? handlers[m.capability] : undefined;
-  if (!h) return { ...m, kind: 'error' as const, target: m.source, source: nucleusId, payload: { code: 'CAPABILITY_NOT_FOUND' } };
+  handlers: Record<string, (payload: unknown) => Promise<unknown> | unknown>,
+): Promise<SoulMeshMessage> {
+  validateMessage(message, nucleusId);
+  if (message.kind !== 'request') return message;
+  const capability = message.capability;
+  if (!capability?.trim()) throw new Error('Missing Mesh capability');
+  const handler = handlers[capability];
+  if (!handler) {
+    return createSoulMeshMessage({
+      source: nucleusId,
+      target: message.source,
+      kind: 'error',
+      capability,
+      correlationId: message.correlationId,
+      payload: { code: 'CAPABILITY_NOT_FOUND' },
+      meta: message.meta,
+      transport: message.transport,
+    });
+  }
   try {
-    return { ...m, kind: 'response' as const, target: m.source, source: nucleusId, payload: await h(m.payload) };
+    return createSoulMeshMessage({
+      source: nucleusId,
+      target: message.source,
+      kind: 'response',
+      capability,
+      correlationId: message.correlationId,
+      payload: await handler(message.payload),
+      meta: message.meta,
+      transport: message.transport,
+    });
   } catch (error) {
-    return { ...m, kind: 'error' as const, target: m.source, source: nucleusId, payload: { code: 'CAPABILITY_EXECUTION_ERROR', detail: error instanceof Error ? error.message : String(error) } };
+    return createSoulMeshMessage({
+      source: nucleusId,
+      target: message.source,
+      kind: 'error',
+      capability,
+      correlationId: message.correlationId,
+      payload: { code: 'CAPABILITY_EXECUTION_ERROR', detail: error instanceof Error ? error.message : 'Unknown error' },
+      meta: message.meta,
+      transport: message.transport,
+    });
   }
 }

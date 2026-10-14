@@ -26,6 +26,8 @@ jobs:
         run: bun test src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/N03AudioCapabilityRegistry.test.ts
       - name: Pair fusion contract
         run: bun run test:pair-fusion
+      - name: N03 endpoint canonical-facade tests
+        run: bun test src/soul-mesh/endpoint.test.ts
       - name: N03 audio runtime behavior
         run: bun test src/mesh/N03CapabilityRuntime.test.ts
       - name: Canonical Mesh HMAC boundary tests
