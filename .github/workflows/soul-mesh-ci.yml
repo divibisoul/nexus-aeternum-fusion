@@ -48,6 +48,8 @@ jobs:
         run: bun test src/soul-mesh/endpoint.test.ts
       - name: N03 audio runtime behavior
         run: bun test src/mesh/N03CapabilityRuntime.test.ts
+      - name: N03 agent override preservation regression
+        run: bun test src/mesh/SoulMeshAgentRegistry.test.ts
       - name: Canonical Mesh HMAC boundary tests
         run: bun test src/mesh/SoulMeshHmac.test.ts
       - name: Standalone Mesh execution smoke
