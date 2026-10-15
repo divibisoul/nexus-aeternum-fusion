@@ -111,7 +111,7 @@ try {
   const n03 = startServer(
     'N03',
     process.execPath,
-    ['--experimental-strip-types', 'scripts/soul-mesh-server.ts'],
+    ['--experimental-strip-types', '--loader', './scripts/n03-ts-extension-loader.mjs', 'scripts/soul-mesh-server.ts'],
     process.cwd(),
     {
       ...baseEnv,
@@ -176,7 +176,7 @@ try {
   const n03ClientEvidence = await runOneShot(
     'N03 registration client → N02 actual server',
     process.execPath,
-    ['--experimental-strip-types', '--input-type=module', '-e', n03RegistrationDriver],
+    ['--experimental-strip-types', '--loader', './scripts/n03-ts-extension-loader.mjs', '--input-type=module', '-e', n03RegistrationDriver],
     process.cwd(),
     {
       ...baseEnv,
