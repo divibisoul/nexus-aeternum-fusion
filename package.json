@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "test:pair-fusion": "bun test src/soul-mesh/N03PairFusion.test.ts",
     "preview": "vite preview",
-    "start": "node --experimental-strip-types --loader ./scripts/n03-ts-extension-loader.mjs scripts/soul-mesh-server.ts",
+    "start": "bun scripts/soul-mesh-server.ts",
+    "start:node:with-loader": "node --experimental-strip-types --loader ./scripts/n03-ts-extension-loader.mjs scripts/soul-mesh-server.ts",
     "start:legacy:no-extension-loader": "node --experimental-strip-types scripts/soul-mesh-server.ts",
     "mesh:listener:check": "node scripts/test-soul-mesh-listener.mjs",
     "mesh:hmac:unit": "bun test ./src/mesh/SoulMeshHmac.test.ts"
