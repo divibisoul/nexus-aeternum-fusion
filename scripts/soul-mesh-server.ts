@@ -62,7 +62,7 @@ function acceptOnce(id: string): boolean {
 
 function meshAuthorized(req: IncomingMessage, message: SoulMeshMessage): boolean {
   const secret = process.env.SOUL_MESH_HMAC_SECRET?.trim();
-  if (secret && verifySoulMeshHmac(message, secret)) return true;
+  if (secret && verifySoulMeshHmac({ ...message, nonce: (message as any).nonce ?? req.headers['x-soul-mesh-nonce'], hmac: (message as any).hmac ?? req.headers['x-soul-mesh-hmac'] } as any, secret)) return true;
 
   const token = process.env.SOUL_MESH_TOKEN?.trim();
   const authorization = typeof req.headers.authorization === "string" ? req.headers.authorization.trim() : "";
