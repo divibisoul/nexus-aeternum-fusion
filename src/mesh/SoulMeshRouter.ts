@@ -14,8 +14,28 @@ export class SoulMeshRouter {
   readonly agents = new SoulMeshAgentRegistry();
 
   register(capability: string, handler: Handler) {
+    const agent = createSoulMeshAgent(`N03.${capability}.agent`, [capability], handler);
+    this.agents.register(agent);
     this.handlers.set(capability, handler);
-    this.agents.register(createSoulMeshAgent(`N03.${capability}.agent`, [capability], handler));
+  }
+
+  /**
+   * Explicit override boundary for canonical runtime upgrades. Existing agent
+   * implementations are archived by the registry before the active handler is
+   * changed; ordinary register() still rejects duplicate IDs.
+   */
+  registerPreservingPrevious(capability: string, handler: Handler) {
+    const agent = createSoulMeshAgent(`N03.${capability}.agent`, [capability], handler);
+    this.agents.preserveAndReplace(agent);
+    this.handlers.set(capability, handler);
+  }
+
+  listPreservedAgents() {
+    return this.agents.listPreservedVersions().map(agent => ({
+      id: agent.id,
+      nucleus: agent.nucleus,
+      capabilities: [...agent.capabilities],
+    }));
   }
 
   async dispatch(message: SoulMeshMessage) {
