@@ -2,8 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { timingSafeEqual } from "node:crypto";
 import process from "node:process";
 import { createSoulMeshMessage, isSoulMeshMessage, type SoulMeshMessage } from "../lib/soul-mesh/SoulMeshProtocol.ts";
-import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from "../src/mesh/SoulMeshHmac";
-import { createN03MeshRouter, declaredN03Capabilities } from "../src/mesh/N03MeshRuntime";
+import { signSoulMeshLegacyResponse, verifySoulMeshHmac } from "../src/mesh/SoulMeshHmac.ts";
+import { createN03MeshRouter, declaredN03Capabilities } from "../src/mesh/N03MeshRuntime.ts";
 
 const HOST = process.env.SOUL_MESH_HOST ?? "0.0.0.0";
 const PORT = Number(process.env.SOUL_MESH_PORT ?? 3030);
