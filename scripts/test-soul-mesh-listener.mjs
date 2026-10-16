@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 
 const port = Number(process.env.SOUL_MESH_PORT ?? 3030);
 const base = "http://127.0.0.1:" + port;
-const child = spawn(process.execPath, ["--experimental-strip-types", "scripts/soul-mesh-server.ts"], {
+const child = spawn(process.env.SOUL_MESH_RUNTIME_BIN ?? "bun", ["scripts/soul-mesh-server.ts"], {
   env: { ...process.env, SOUL_MESH_HOST: "127.0.0.1", SOUL_MESH_PORT: String(port), NODE_ENV: "test" },
   stdio: ["ignore", "pipe", "pipe"],
 });

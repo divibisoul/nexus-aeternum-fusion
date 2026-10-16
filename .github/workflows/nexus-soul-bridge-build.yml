@@ -16,7 +16,7 @@ on:
       - '.github/workflows/nexus-soul-bridge-build.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: nexus-soul-bridge-main
@@ -35,7 +35,17 @@ jobs:
           cache: npm
       - name: Sync npm lockfile
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Commit synchronized lockfile
+      - name: Preserve synchronized lockfile candidate for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n03-package-lock-candidate
+          path: package-lock.json
+          if-no-files-found: warn
+      # Historical automatic main push is retained below for provenance but disabled.
+      # Changes must be reviewed and merged through a pull request.
+      - name: Commit synchronized lockfile (legacy; disabled)
+        if: ${{ false }}
         run: |
           if git diff --quiet -- package-lock.json; then exit 0; fi
           git config user.name github-actions[bot]

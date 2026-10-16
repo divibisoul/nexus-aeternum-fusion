@@ -23,12 +23,12 @@ export interface SoulMeshMessage<T = unknown> {
 export function createSoulMeshMessage<T>(input: Omit<SoulMeshMessage<T>, 'protocol' | 'contractVersion' | 'id' | 'timestamp'> & { contractVersion?: typeof SOUL_MESH_CONTRACT_VERSION }): SoulMeshMessage<T> {
   const id = crypto.randomUUID();
   return {
+    ...input,
     protocol: SOUL_MESH_PROTOCOL,
     contractVersion: input.contractVersion ?? SOUL_MESH_CONTRACT_VERSION,
     id,
     timestamp: Date.now(),
     correlationId: input.correlationId || id,
-    ...input,
   };
 }
 

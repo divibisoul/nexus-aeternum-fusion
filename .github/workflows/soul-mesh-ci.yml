@@ -2,6 +2,8 @@ name: Soul Mesh CI
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,6 +22,22 @@ jobs:
           bun-version: latest
       - name: Install dependency graph for verification
         run: bun install --no-save
+      - name: Checkout pinned N02 runtime for cross-process E2E
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/Eternium-
+          ref: 0516bfcffa266190910c36389c75df642e13da41
+          path: .integration/n02
+          submodules: false
+          persist-credentials: false
+      - name: Verify exact N02 runtime source
+        run: test "$(git -C .integration/n02 rev-parse HEAD)" = "0516bfcffa266190910c36389c75df642e13da41"
+      - name: Install N02 runtime dependencies for cross-process E2E
+        run: npm install --prefix .integration/n02 --omit=dev --legacy-peer-deps --no-audit --no-fund
+      - name: N02↔N03 authenticated real-process E2E
+        env:
+          SOUL_N02_WORKDIR: ${{ github.workspace }}/.integration/n02
+        run: node scripts/n02-n03-real-process-e2e.mjs
       - name: Typecheck Mesh adapter
         run: bun x tsc -p tsconfig.mesh.json --noEmit
       - name: Provider adapter boundary tests
@@ -30,6 +48,8 @@ jobs:
         run: bun test src/soul-mesh/endpoint.test.ts
       - name: N03 audio runtime behavior
         run: bun test src/mesh/N03CapabilityRuntime.test.ts
+      - name: N03 agent override preservation regression
+        run: bun test src/mesh/SoulMeshAgentRegistry.test.ts
       - name: Canonical Mesh HMAC boundary tests
         run: bun test src/mesh/SoulMeshHmac.test.ts
       - name: Standalone Mesh execution smoke

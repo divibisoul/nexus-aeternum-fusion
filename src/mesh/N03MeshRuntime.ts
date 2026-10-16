@@ -141,6 +141,7 @@ export function createN03MeshRouter(): SoulMeshRouter {
       declaredCapabilities: declaredN03Capabilities(),
       executableCapabilities: [...new Set(agents.flatMap(agent => agent.capabilities))],
       agents,
+      preservedAgentVersions: router.listPreservedAgents(),
       residentAgent: N03_RESIDENT_AGENT,
       whisper: describeWhisperAdapter(),
       kokoro: describeKokoroAdapter(),
@@ -153,6 +154,7 @@ export function createN03MeshRouter(): SoulMeshRouter {
     nucleus: N03_NUCLEUS_ID,
     capabilities: N03_AUDIO_CAPABILITIES,
     agents: router.listAgents(),
+    preservedAgentVersions: router.listPreservedAgents(),
     residentAgent: N03_RESIDENT_AGENT,
     whisper: describeWhisperAdapter(),
     kokoro: describeKokoroAdapter(),
@@ -168,7 +170,7 @@ export function createN03MeshRouter(): SoulMeshRouter {
 // Additive canonical runtime bindings. The older handlers above remain preserved
 // for compatibility/history; these registrations become the active execution boundary.
 export function registerN03CapabilityRuntime(router: SoulMeshRouter, runtime = new N03CapabilityRuntime()): SoulMeshRouter {
-  router.register('audio.transcribe', message => runtime.execute('audio.transcribe', message.payload));
-  router.register('audio.transform', message => runtime.execute('audio.transform', message.payload));
+  router.registerPreservingPrevious('audio.transcribe', message => runtime.execute('audio.transcribe', message.payload));
+  router.registerPreservingPrevious('audio.transform', message => runtime.execute('audio.transform', message.payload));
   return router;
 }
