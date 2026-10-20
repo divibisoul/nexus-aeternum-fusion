@@ -5,11 +5,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches-ignore: [main]
-    paths:
-      - package.json
-      - .github/workflows/regenerate-bun-lockfile.yml
+  workflow_dispatch:
 
 permissions:
   contents: write

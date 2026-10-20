@@ -4,13 +4,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches:
-      - main
-      - 'fix/**'
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
 env:
