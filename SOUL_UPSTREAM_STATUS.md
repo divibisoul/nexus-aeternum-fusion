@@ -27,3 +27,8 @@ N03 owns audio perception and speech. The upstream models augment this specialty
 4. Keep AgentScope `adapter-planned` until a real bounded voice/multimodal agent transaction returns through Mesh.
 
 **Gate:** Whisper/Kokoro have structural adapters, but all three public sources remain runtime-unverified in this audit.
+
+
+## Latest structural validation
+
+The isolated N03 validation workflow passed on SHA `22ba7066442bb64cdca72cd5858ace7e63bc74f4`: [GitHub Actions run 40192359891](https://github.com/divibisoul/nexus-aeternum-fusion/actions/runs/40192359891). It completed Mesh typecheck, Whisper/Kokoro/registry tests, native runtime tests, pair-fusion, endpoint, HMAC, listener smoke and build steps. This validates the tested guardrails at that branch head; no real provider transcription/synthesis or production Mesh transaction was executed.
