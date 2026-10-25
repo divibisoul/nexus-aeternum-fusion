@@ -1,47 +1,61 @@
-# N03 — Sistema Auditivo e de Fala do Soul
+# N03 — Sistema Auditivo e de Fala do SOUL
 
-N03 (`nexus-aeternum-fusion`) é o núcleo destinado à percepção auditiva e à fala do Soul. O projeto declara Google Cloud Speech, Google Cloud Text-to-Speech e Hugging Face Transformers como tecnologias disponíveis.
+N03 (`nexus-aeternum-fusion`) é o núcleo de percepção auditiva, processamento de áudio e fala. Ele preserva seus adaptadores nativos e delega capacidades complementares aos demais núcleos pelo Soul Mesh.
 
-## Soul Mesh — topologia K6
+## Soul Mesh — sete núcleos
 
-N03 é um nó da rede circular de 6 núcleos. Ele possui cinco conexões bidirecionais planejadas, uma com cada peer: **N01, N02, N04, N05 e N06**. Cada peer possui um canal IN e um canal OUT em relação ao N03.
+N03 mantém canais de entrada e saída para os seis peers: **N01, N02, N04, N05, N06 e N07**. A topologia declarada não prova conectividade operacional: cada ligação só é considerada real quando uma chamada autenticada recebe uma resposta correlacionada.
 
 A fundação Mesh está em `src/mesh/`:
 
-- `SoulMeshProtocol.ts` — identidade N03 e protocolo `soul-mesh/1` v1.1.0.
-- `SoulMeshHttpTransport.ts` — HTTP com retry, backoff e circuit-breaker.
-- `SoulMeshRouter.ts` — despacho de requests.
-- `SoulMeshDiscovery.ts` — persistência local de peers como fallback.
+- `SoulMeshProtocol.ts` — identidade, protocolo `soul-mesh/1` e contrato v1.1.0.
+- `SoulMeshHttpTransport.ts` — transporte HTTP, retry, backoff e circuit-breaker.
+- `SoulMeshRouter.ts` — despacho de capacidades locais.
+- `SoulMeshDiscovery.ts` — descoberta e persistência de peers.
 - `SoulMeshPeerTransport.ts` — validação de origem/destino e canais.
-- `N03AudioCapabilityRegistry.ts` — catálogo das capacidades auditivas e de fala.
+- `N03AudioCapabilityRegistry.ts` — estados declarados das capacidades de áudio.
+- `N03MeshRuntime.ts` — handlers reais e registro das capacidades executáveis.
 
-## Capabilities auditivas e de fala
+## Capacidades de áudio e fala
 
-- `audio.transcribe` — contrato para transcrição via Google Cloud Speech/Hugging Face.
-- `speech.synthesize` — contrato para síntese via Google Cloud Text-to-Speech.
-- `audio.analyze.emotion` — adapter/modelo de emoção pendente.
-- `speech.translate` — pipeline transcrição → tradução → fala, adapter pendente.
-- `audio.summarize` — resumo de áudio, runtime de IA pendente.
-- `audio.listen.continuous` — escuta contínua, runtime de áudio pendente.
-- `audio.denoise` — redução de ruído, DSP/runtime pendente.
-- `speaker.identify` — identificação de locutor, modelo/runtime pendente.
+O estado abaixo acompanha `N03_AUDIO_CAPABILITIES`; a lista não deve ser usada como substituta de uma transação real.
 
-**Não declaramos como implementada uma função cujo adapter real ainda não existe.**
+| Capacidade | Estado | Implementação / limite |
+|---|---|---|
+| `audio.transcribe` | Implementada | Transcrição de áudio pelo adaptador Gemini |
+| `speech.synthesize` | Implementada | Síntese de fala pelo adaptador Gemini |
+| `audio.transform` | Implementada | Normalização/conversão PCM16/WAV; artefatos documentais podem ser delegados a N04 |
+| `audio.analyze.emotion` | Implementada | Análise de áudio pelo adaptador Gemini |
+| `speech.translate` | Implementada | Transcrição seguida de tradução |
+| `audio.summarize` | Implementada | Resumo substantivo de áudio |
+| `speaker.identify` | Implementada com limite | Diarização/turnos de fala; **não** identifica a identidade civil de uma pessoa |
+| `audio.listen.continuous` | Adaptador necessário | Exige stream de áudio do navegador/dispositivo; não é anunciado como executável |
+| `audio.denoise` | Adaptador necessário | Exige DSP de redução de ruído; não é simulado por uma chamada de linguagem |
+| `audio.transcribe.whisper@1.0.0` | Adaptador necessário | Whisper local requer checkout fixado e pesos de modelo provisionados |
+| `speech.synthesize.kokoro@1.0.0` | Adaptador necessário | Kokoro local requer checkout fixado, runtime Python e transação real de síntese |
 
-## Provedores
+Uma capacidade só deve ser anunciada como executável quando houver handler registrado e configuração disponível. A confirmação de operação exige uma transação real com resultado válido; presença de dependência, catálogo ou endpoint, isoladamente, não basta.
 
-As dependências `@google-cloud/speech`, `@google-cloud/text-to-speech` e `@huggingface/transformers` estão presentes no projeto. A integração de credenciais deve ocorrer somente no runtime/servidor, sem chaves no código ou Git.
+## Cooperação entre núcleos
 
-## Estado
+- **N02:** execução de capacidades externas de raciocínio/ferramentas com preflight orbital quando solicitado.
+- **N04:** execução de ferramentas e análise de artefatos/documentos.
+- **N07:** descoberta/federação e coordenação por meio do contrato Mesh comum.
+- **SARA:** ciclo regenerativo, auditoria, governança e rastreabilidade quando o serviço federado estiver configurado.
 
-Consulte `MESH_STATUS.md`. A topologia e os contratos estão preparados; comunicação E2E só pode ser confirmada quando os núcleos estiverem executando e acessíveis.
+Cada chamada federada deve preservar a correlação, validar a resposta e propagar erros de forma explícita. Uma ligação ausente ou sem configuração permanece bloqueada; não é convertida em sucesso.
 
-O endpoint legado `api/soul-mesh.ts` permanece preservado. A nova camada é aditiva e não remove código existente.
+## Provedores e segredos
 
-## Desenvolvimento
+As credenciais de provedores ficam somente no ambiente do servidor, nunca no código ou no Git. Os adaptadores locais Whisper/Kokoro dependem dos artefatos e runtimes indicados acima.
+
+## Estado e desenvolvimento
+
+Consulte `MESH_STATUS.md` e os testes do runtime para o estado atualizado. A topologia e os contratos são evidência estrutural; a conectividade ponta a ponta só pode ser confirmada por testes reais entre processos.
 
 ```sh
-npm i
-npm run dev
+npm install
+npm run typecheck
+npm run mesh:listener:check
 npm run build
 ```
