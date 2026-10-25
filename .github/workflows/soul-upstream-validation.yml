@@ -1,0 +1,59 @@
+name: N03 Public Upstream Validation
+
+on:
+  push:
+    branches:
+      - 'audit/ai-nucleus-status-2026-10-25'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n03-upstream-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audio-upstreams:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact audit head
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install verification dependency graph
+        run: bun install --no-save
+
+      - name: Typecheck canonical Mesh/audio runtime
+        run: bun x tsc -p tsconfig.mesh.json --noEmit
+
+      - name: Validate Whisper, Kokoro and audio-capability state gates
+        run: bun test src/mesh/WhisperAdapter.test.ts src/mesh/KokoroAdapter.test.ts src/mesh/N03AudioCapabilityRegistry.test.ts
+
+      - name: Validate native N03 capability runtime
+        run: bun test src/mesh/N03CapabilityRuntime.test.ts
+
+      - name: Validate paired-fusion contract
+        run: bun run test:pair-fusion
+
+      - name: Validate endpoint boundary
+        run: bun test src/soul-mesh/endpoint.test.ts
+
+      - name: Validate Mesh HMAC boundary
+        run: bun test src/mesh/SoulMeshHmac.test.ts
+
+      - name: Run listener smoke test
+        run: npm run mesh:listener:check
+
+      - name: Build N03 web/runtime bundle
+        run: bun run build
